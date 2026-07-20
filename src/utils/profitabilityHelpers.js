@@ -1,7 +1,7 @@
 // Calculs de rentabilité pour les modèles catalogue.
 // Coûts variables = par participant · coûts fixes = par session.
 
-export const DEFAULT_REVENU_HORAIRE_OBJECTIF = 50;
+export const DEFAULT_REVENU_HORAIRE_OBJECTIF = 25;
 
 export const PROFITABILITY_STATUS = {
   RED: "red",
