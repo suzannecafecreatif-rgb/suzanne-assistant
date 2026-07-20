@@ -65,6 +65,9 @@ function atelierToRow(a) {
 }
 
 function catalogueFromRow(r) {
+  const coutMatiereParticipant = safeNumberField(
+    r.cout_matiere_participant ?? r.cout_matiere
+  );
   return {
     id: r.id,
     nom: safeText(r.nom),
@@ -75,7 +78,14 @@ function catalogueFromRow(r) {
     placesMax: safeNumberField(r.places_max),
     dureeMin: safeNumberField(r.duree_min),
     prepMin: safeNumberField(r.prep_min),
-    coutMatiere: safeNumberField(r.cout_matiere),
+    rangementMin: safeNumberField(r.rangement_min),
+    coutMatiereParticipant,
+    coutBoissonParticipant: safeNumberField(r.cout_boisson_participant),
+    coutGourmandiseParticipant: safeNumberField(r.cout_gourmandise_participant),
+    autresCoutsParticipant: safeNumberField(r.autres_couts_participant ?? r.autre_cout_participant),
+    coutsFixesAtelier: safeNumberField(r.couts_fixes_atelier ?? r.autres_couts_fixes),
+    // Alias legacy — même valeur que coutMatiereParticipant
+    coutMatiere: coutMatiereParticipant,
     difficulte: safeText(r.difficulte),
     publicConseille: safeText(r.public_conseille),
     materials: safeArray(r.materials),
@@ -98,6 +108,7 @@ function toNullableNumber(v) {
 }
 
 function catalogueToRow(c) {
+  const coutMatiereParticipant = toNullableNumber(c.coutMatiereParticipant ?? c.coutMatiere);
   return {
     id: c.id,
     nom: c.nom,
@@ -108,7 +119,13 @@ function catalogueToRow(c) {
     places_max: toNullableNumber(c.placesMax),
     duree_min: toNullableNumber(c.dureeMin),
     prep_min: toNullableNumber(c.prepMin),
-    cout_matiere: toNullableNumber(c.coutMatiere),
+    rangement_min: toNullableNumber(c.rangementMin),
+    cout_matiere_participant: coutMatiereParticipant,
+    cout_boisson_participant: toNullableNumber(c.coutBoissonParticipant),
+    cout_gourmandise_participant: toNullableNumber(c.coutGourmandiseParticipant),
+    autres_couts_participant: toNullableNumber(c.autresCoutsParticipant),
+    couts_fixes_atelier: toNullableNumber(c.coutsFixesAtelier),
+    cout_matiere: coutMatiereParticipant,
     difficulte: c.difficulte || null,
     public_conseille: c.publicConseille || "",
     materials: c.materials || [],

@@ -290,6 +290,66 @@ body {
 .fiche-catalogue-textarea { resize: vertical; min-height: 88px; line-height: 1.45; }
 .field-last { margin-bottom: 0; }
 
+.rentabilite-tab { display: flex; flex-direction: column; gap: 1.5rem; }
+.rentabilite-section-title {
+  font-family: "Fraunces", serif; font-size: 1.05rem; font-weight: 600;
+  margin: 0 0 0.35rem; color: var(--ink);
+}
+.rentabilite-hint { margin: 0 0 1rem; }
+.rentabilite-simulator {
+  background: var(--cream); border: 0.5px solid var(--line); border-radius: 12px;
+  padding: 1rem 1.1rem;
+}
+.rentabilite-simulator-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px;
+}
+.rentabilite-simulator-value { font-family: "Fraunces", serif; font-size: 1.1rem; color: var(--ink); }
+.rentabilite-range { width: 100%; accent-color: var(--terracotta); margin-bottom: 10px; }
+.rentabilite-scenarios { display: flex; flex-wrap: wrap; gap: 8px; }
+.rentabilite-scenarios .btn.active {
+  background: var(--terracotta); color: #fff; border-color: var(--terracotta);
+}
+.rentabilite-decision {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+}
+.rentabilite-block {
+  background: #fff; border: 0.5px solid var(--line); border-radius: 12px;
+  padding: 1rem 1.1rem; min-height: 100%;
+}
+.rentabilite-block-title {
+  font-size: 13px; font-weight: 600; margin: 0 0 0.5rem; color: var(--ink);
+}
+.rentabilite-block-main {
+  font-family: "Fraunces", serif; font-size: 1.45rem; font-weight: 600;
+  margin: 0 0 0.35rem; color: var(--ink);
+}
+.rentabilite-block-detail, .rentabilite-verdict-text, .rentabilite-verdict-meta {
+  font-size: 13px; line-height: 1.45; color: var(--ink-soft); margin: 0;
+}
+.rentabilite-cost-list {
+  list-style: none; padding: 0; margin: 0.35rem 0 0; display: flex; flex-direction: column; gap: 6px;
+}
+.rentabilite-cost-list li {
+  display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; color: var(--ink-soft);
+}
+.rentabilite-block-verdict { grid-column: 1 / -1; }
+.rentabilite-verdict-title {
+  font-family: "Fraunces", serif; font-size: 1.2rem; font-weight: 600; margin: 0 0 0.35rem;
+}
+.rentabilite-verdict-meta { margin-top: 0.65rem; font-size: 12px; }
+.rentabilite-decision--red .rentabilite-block-verdict {
+  background: #fff5f3; border-color: #e8b4ab;
+}
+.rentabilite-decision--red .rentabilite-verdict-title { color: #9b3d30; }
+.rentabilite-decision--orange .rentabilite-block-verdict {
+  background: #fff8ef; border-color: #e8c98a;
+}
+.rentabilite-decision--orange .rentabilite-verdict-title { color: #9a6b1a; }
+.rentabilite-decision--green .rentabilite-block-verdict {
+  background: #f3faf5; border-color: #a8d4b4;
+}
+.rentabilite-decision--green .rentabilite-verdict-title { color: #2d6a45; }
+
 .comm-text-block { margin-bottom: 1.25rem; }
 .comm-text-block-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -352,6 +412,7 @@ body {
   .fiche-catalogue-tabs { width: 100%; display: flex; }
   .fiche-catalogue-tabs button { flex: 1; text-align: center; padding: 8px 6px; font-size: 12px; }
   .fiche-catalogue-panel { padding: 1rem; }
+  .rentabilite-decision { grid-template-columns: 1fr; }
   .comm-text-block-header { flex-wrap: wrap; }
 }
 

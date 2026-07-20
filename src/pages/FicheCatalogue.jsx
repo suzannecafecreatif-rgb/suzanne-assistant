@@ -5,6 +5,7 @@ import ImageUpload from "../components/ImageUpload.jsx";
 import CatalogueCard from "../components/CatalogueCard.jsx";
 import CommunicationTextBlock from "../components/CommunicationTextBlock.jsx";
 import MediaGallery from "../components/MediaGallery.jsx";
+import CatalogueRentabiliteTab from "../components/CatalogueRentabiliteTab.jsx";
 
 const DIFFICULTE_OPTIONS = [
   { value: "", label: "— Choisir —" },
@@ -25,7 +26,13 @@ function emptyCatalogueForm(record) {
     placesMax: "",
     dureeMin: "",
     prepMin: "",
+    rangementMin: "",
     coutMatiere: "",
+    coutMatiereParticipant: "",
+    coutBoissonParticipant: "",
+    coutGourmandiseParticipant: "",
+    autresCoutsParticipant: "",
+    coutsFixesAtelier: "",
     difficulte: "",
     publicConseille: "",
     materials: [],
@@ -44,10 +51,20 @@ function emptyCatalogueForm(record) {
 }
 
 function mergeRecord(record) {
-  return { ...emptyCatalogueForm(record), ...record };
+  const merged = { ...emptyCatalogueForm(record), ...record };
+  if (!merged.coutMatiereParticipant && merged.coutMatiere) {
+    merged.coutMatiereParticipant = merged.coutMatiere;
+  }
+  if (!merged.autresCoutsParticipant && merged.autreCoutParticipant) {
+    merged.autresCoutsParticipant = merged.autreCoutParticipant;
+  }
+  if (!merged.coutsFixesAtelier && merged.autresCoutsFixes) {
+    merged.coutsFixesAtelier = merged.autresCoutsFixes;
+  }
+  return merged;
 }
 
-export default function FicheCatalogue({ prefill, stock, onSave, onUpdate, onDelete, navigate }) {
+export default function FicheCatalogue({ prefill, stock, onSave, onUpdate, onDelete, navigate, revenuHoraireObjectif }) {
   const editingRecord = prefill?.editing ? prefill.record : null;
   const isEditing = !!editingRecord;
 
@@ -99,6 +116,7 @@ export default function FicheCatalogue({ prefill, stock, onSave, onUpdate, onDel
     const payload = {
       ...form,
       nom: form.nom.trim(),
+      coutMatiere: form.coutMatiereParticipant || form.coutMatiere,
       createdAt: isEditing ? editingRecord.createdAt : new Date().toISOString()
     };
 
@@ -181,6 +199,9 @@ export default function FicheCatalogue({ prefill, stock, onSave, onUpdate, onDel
             </button>
             <button type="button" className={tab === "communication" ? "active" : ""} onClick={() => setTab("communication")}>
               Communication
+            </button>
+            <button type="button" className={tab === "rentabilite" ? "active" : ""} onClick={() => setTab("rentabilite")}>
+              Rentabilité
             </button>
           </div>
 
@@ -268,11 +289,9 @@ export default function FicheCatalogue({ prefill, stock, onSave, onUpdate, onDel
               </>
             ) : tab === "materiel" ? (
               <>
-                <label className="field">
-                  <span className="label">Coût matière (€)</span>
-                  <input className="input" type="number" min="0" step="0.5" value={form.coutMatiere} onChange={update("coutMatiere")} placeholder="18" />
-                </label>
-
+                <p className="hint-text rentabilite-hint">
+                  Les coûts financiers se gèrent dans l'onglet Rentabilité. Ici, liste le matériel utilisé.
+                </p>
                 <div className="materials-field">
                   <span className="label">Matériel (lié au stock)</span>
                   {stock.length === 0 ? (
@@ -299,6 +318,12 @@ export default function FicheCatalogue({ prefill, stock, onSave, onUpdate, onDel
                   )}
                 </div>
               </>
+            ) : tab === "rentabilite" ? (
+              <CatalogueRentabiliteTab
+                form={form}
+                update={update}
+                revenuHoraireObjectif={revenuHoraireObjectif}
+              />
             ) : (
               <>
                 <CommunicationTextBlock

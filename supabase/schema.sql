@@ -81,6 +81,12 @@ create table if not exists catalogue_ateliers (
   duree_min integer,
   prep_min integer,
   cout_matiere numeric,
+  cout_matiere_participant numeric,
+  cout_boisson_participant numeric,
+  cout_gourmandise_participant numeric,
+  autres_couts_participant numeric,
+  couts_fixes_atelier numeric,
+  rangement_min integer,
   difficulte text check (difficulte is null or difficulte in ('facile', 'intermediaire', 'avance')),
   public_conseille text,
   materials jsonb default '[]'::jsonb,
@@ -159,3 +165,25 @@ create policy "catalogue_storage_delete" on storage.objects
     bucket_id = 'catalogue'
     and auth.uid()::text = (storage.foldername(name))[1]
   );
+
+-- Rentabilité catalogue — coûts variables / participant + fixes session
+alter table catalogue_ateliers add column if not exists cout_matiere_participant numeric;
+alter table catalogue_ateliers add column if not exists cout_boisson_participant numeric;
+alter table catalogue_ateliers add column if not exists cout_gourmandise_participant numeric;
+alter table catalogue_ateliers add column if not exists autres_couts_participant numeric;
+alter table catalogue_ateliers add column if not exists couts_fixes_atelier numeric;
+alter table catalogue_ateliers add column if not exists rangement_min integer;
+
+-- Migration legacy : cout_matiere → cout_matiere_participant
+update catalogue_ateliers
+set cout_matiere_participant = cout_matiere
+where cout_matiere_participant is null and cout_matiere is not null;
+
+-- Migration R-B : anciens noms de colonnes → nouveaux noms
+update catalogue_ateliers
+set autres_couts_participant = autre_cout_participant
+where autres_couts_participant is null and autre_cout_participant is not null;
+
+update catalogue_ateliers
+set couts_fixes_atelier = autres_couts_fixes
+where couts_fixes_atelier is null and autres_couts_fixes is not null;

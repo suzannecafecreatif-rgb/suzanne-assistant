@@ -21,7 +21,7 @@ import { supabase } from "./lib/supabaseClient.js";
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = pas encore vérifié
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const { screen, ateliers, stock, catalogue, prefill, loading } = state;
+  const { screen, ateliers, stock, catalogue, prefill, loading, revenuHoraireObjectif } = state;
 
   // --- Authentification ------------------------------------------------
   useEffect(() => {
@@ -147,6 +147,7 @@ export default function App() {
             onUpdate={handleUpdateCatalogue}
             onDelete={handleDeleteCatalogue}
             navigate={navigate}
+            revenuHoraireObjectif={revenuHoraireObjectif}
           />
         ) : screen === "fiche" ? (
           <FicheAtelier prefill={prefill} stock={stock} onSave={handleSave} onUpdate={handleUpdateAtelier} navigate={navigate} />

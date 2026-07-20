@@ -2,13 +2,16 @@
 // passe par une action décrite ici, et par ce chemin uniquement.
 // Aucun composant d'écran ne modifie l'état directement.
 
+import { DEFAULT_REVENU_HORAIRE_OBJECTIF } from "../utils/profitabilityHelpers.js";
+
 export const initialState = {
   screen: "catalogue",
   ateliers: [],
   stock: [],
   catalogue: [],
   prefill: null,
-  loading: true
+  loading: true,
+  revenuHoraireObjectif: DEFAULT_REVENU_HORAIRE_OBJECTIF
 };
 
 export function appReducer(state, action) {
@@ -83,6 +86,9 @@ export function appReducer(state, action) {
 
     case "DELETE_STOCK":
       return { ...state, stock: state.stock.filter((s) => s.id !== action.id) };
+
+    case "SET_REVENU_HORAIRE_OBJECTIF":
+      return { ...state, revenuHoraireObjectif: action.value };
 
     default:
       return state;
