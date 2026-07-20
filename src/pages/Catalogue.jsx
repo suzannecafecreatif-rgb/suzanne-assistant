@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Search } from "lucide-react";
-import { THEMES } from "../data/themes.js";
+import { ACTIVITY_TYPES, CATALOGUE_CATEGORIES } from "../data/catalogueMeta.js";
 import CatalogueCard from "../components/CatalogueCard.jsx";
 
 export default function Catalogue({ catalogue, navigate, prefill, onDuplicate, onDelete }) {
   const [search, setSearch] = useState("");
   const [filterCategorie, setFilterCategorie] = useState("");
+  const [filterTypeActivite, setFilterTypeActivite] = useState("");
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
@@ -23,11 +24,12 @@ export default function Catalogue({ catalogue, navigate, prefill, onDuplicate, o
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return activeItems.filter((c) => {
+      if (filterTypeActivite && c.typeActivite !== filterTypeActivite) return false;
       if (filterCategorie && c.categorie !== filterCategorie) return false;
       if (!q) return true;
       return (c.nom || "").toLowerCase().includes(q);
     });
-  }, [activeItems, search, filterCategorie]);
+  }, [activeItems, search, filterCategorie, filterTypeActivite]);
 
   const handleEdit = (item) => {
     navigate("catalogue-fiche", { editing: true, record: item });
@@ -79,12 +81,23 @@ export default function Catalogue({ catalogue, navigate, prefill, onDuplicate, o
         </div>
         <select
           className="input catalogue-filter"
+          value={filterTypeActivite}
+          onChange={(e) => setFilterTypeActivite(e.target.value)}
+          aria-label="Filtrer par type d'activité"
+        >
+          <option value="">Tous les types</option>
+          {ACTIVITY_TYPES.map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+        <select
+          className="input catalogue-filter"
           value={filterCategorie}
           onChange={(e) => setFilterCategorie(e.target.value)}
           aria-label="Filtrer par catégorie"
         >
           <option value="">Toutes les catégories</option>
-          {THEMES.map((t) => (
+          {CATALOGUE_CATEGORIES.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
@@ -109,7 +122,7 @@ export default function Catalogue({ catalogue, navigate, prefill, onDuplicate, o
         <div className="empty-card">
           <p className="empty-title">Aucun résultat</p>
           <p className="empty-body">
-            Aucun modèle ne correspond à ta recherche. Essaie un autre nom ou une autre catégorie.
+            Aucun modèle ne correspond à ta recherche. Essaie un autre nom, type ou catégorie.
           </p>
         </div>
       ) : (

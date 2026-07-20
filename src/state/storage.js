@@ -71,6 +71,7 @@ function catalogueFromRow(r) {
   return {
     id: r.id,
     nom: safeText(r.nom),
+    typeActivite: safeText(r.type_activite),
     categorie: safeText(r.categorie),
     photoPath: safeText(r.photo_path),
     description: safeText(r.description),
@@ -112,6 +113,7 @@ function catalogueToRow(c) {
   return {
     id: c.id,
     nom: c.nom,
+    type_activite: c.typeActivite || null,
     categorie: c.categorie,
     photo_path: c.photoPath || null,
     description: c.description || "",

@@ -73,6 +73,7 @@ create table if not exists catalogue_ateliers (
 
   -- Informations essentielles
   nom text not null,
+  type_activite text not null,
   categorie text not null,
   photo_path text,
   description text,
@@ -187,3 +188,14 @@ where autres_couts_participant is null and autre_cout_participant is not null;
 update catalogue_ateliers
 set couts_fixes_atelier = autres_couts_fixes
 where couts_fixes_atelier is null and autres_couts_fixes is not null;
+
+-- Type d'activité (catalogue)
+alter table catalogue_ateliers add column if not exists type_activite text;
+
+update catalogue_ateliers
+set type_activite = 'Atelier guidé'
+where type_activite is null;
+
+alter table catalogue_ateliers drop constraint if exists catalogue_type_activite_check;
+alter table catalogue_ateliers add constraint catalogue_type_activite_check
+  check (type_activite in ('Atelier guidé', 'Pause créative', 'Atelier intervenant', 'Événement privé'));

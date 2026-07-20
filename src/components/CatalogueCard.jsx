@@ -55,8 +55,15 @@ export default function CatalogueCard({ item, onEdit, onDuplicate, onDelete, pre
             <ImageIcon size={28} />
           </div>
         )}
-        {item.categorie && (
-          <span className="catalogue-card-category">{item.categorie}</span>
+        {(item.typeActivite || item.categorie) && (
+          <div className="catalogue-card-badges">
+            {item.typeActivite && (
+              <span className="catalogue-card-type">{item.typeActivite}</span>
+            )}
+            {item.categorie && (
+              <span className="catalogue-card-category">{item.categorie}</span>
+            )}
+          </div>
         )}
       </div>
 

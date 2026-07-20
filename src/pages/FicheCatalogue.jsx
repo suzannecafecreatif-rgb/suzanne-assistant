@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
-import { THEMES } from "../data/themes.js";
+import { ACTIVITY_TYPES, CATALOGUE_CATEGORIES } from "../data/catalogueMeta.js";
 import ImageUpload from "../components/ImageUpload.jsx";
 import CatalogueCard from "../components/CatalogueCard.jsx";
 import CommunicationTextBlock from "../components/CommunicationTextBlock.jsx";
@@ -19,7 +19,8 @@ function emptyCatalogueForm(record) {
   return {
     id,
     nom: "",
-    categorie: THEMES[0],
+    typeActivite: "",
+    categorie: CATALOGUE_CATEGORIES[0],
     photoPath: "",
     description: "",
     prixParticipant: "",
@@ -103,6 +104,11 @@ export default function FicheCatalogue({ prefill, stock, onSave, onUpdate, onDel
     setError("");
     if (!form.nom.trim()) {
       setError("Le nom de l'atelier est obligatoire.");
+      setTab("infos");
+      return;
+    }
+    if (!form.typeActivite) {
+      setError("Le type d'activité est obligatoire.");
       setTab("infos");
       return;
     }
@@ -220,9 +226,19 @@ export default function FicheCatalogue({ prefill, stock, onSave, onUpdate, onDel
                 </label>
 
                 <label className="field">
+                  <span className="label">Type d'activité</span>
+                  <select className="input" value={form.typeActivite} onChange={update("typeActivite")} required>
+                    <option value="">— Choisir —</option>
+                    {ACTIVITY_TYPES.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="field">
                   <span className="label">Catégorie</span>
                   <select className="input" value={form.categorie} onChange={update("categorie")}>
-                    {THEMES.map((t) => (
+                    {CATALOGUE_CATEGORIES.map((t) => (
                       <option key={t} value={t}>{t}</option>
                     ))}
                   </select>
