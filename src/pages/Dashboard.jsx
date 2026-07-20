@@ -31,10 +31,10 @@ export default function Dashboard({ ateliers, stock, onUpdate, navigate }) {
 
       {ateliers.length === 0 ? (
         <div className="empty-card">
-          <p className="empty-title">Commence à nourrir ton assistante</p>
-          <p className="empty-body">Enregistre ton premier atelier pour que le centre de commandement devienne utile.</p>
-          <button className="btn btn-primary" onClick={() => navigate("fiche")}>
-            <Plus size={15} aria-hidden="true" /> Ajouter un atelier
+          <p className="empty-title">Prépare ta bibliothèque d'ateliers</p>
+          <p className="empty-body">Commence par créer tes modèles réutilisables dans le Catalogue — photo, fiche, communication — avant de planifier des dates.</p>
+          <button className="btn btn-primary" onClick={() => navigate("catalogue")}>
+            <Plus size={15} aria-hidden="true" /> Ouvrir le Catalogue
           </button>
         </div>
       ) : (

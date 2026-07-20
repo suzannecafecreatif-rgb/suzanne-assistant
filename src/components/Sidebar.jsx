@@ -1,10 +1,14 @@
 import {
-  Home, Palette, CalendarDays, Megaphone, Package, Gift, Lightbulb, Plus, TrendingUp, Coffee, LogOut
+  Home, Palette, CalendarDays, Megaphone, Package, Gift, Lightbulb, Plus, TrendingUp, Coffee, LogOut, BookOpen
 } from "lucide-react";
+
+export const NAV_BIBLIOTHEQUE = [
+  { key: "catalogue", label: "Catalogue", icon: BookOpen }
+];
 
 export const NAV_ACTIVE = [
   { key: "dashboard", label: "Tableau de bord", icon: Home },
-  { key: "fiche", label: "Nouvel atelier", icon: Plus },
+  { key: "fiche", label: "Planifier une session", icon: Plus },
   { key: "historique", label: "Historique", icon: Palette },
   { key: "rentabilite", label: "Rentabilité", icon: TrendingUp },
   { key: "stocks", label: "Stocks", icon: Package },
@@ -24,6 +28,24 @@ export default function Sidebar({ screen, navigate, onLogout }) {
         <Coffee size={18} aria-hidden="true" />
         <span>Suzanne</span>
       </div>
+      <div className="nav-group">
+        <p className="nav-section-label">Bibliothèque</p>
+        {NAV_BIBLIOTHEQUE.map((item) => {
+          const Icon = item.icon;
+          const active = screen === item.key || screen === "catalogue-fiche";
+          return (
+            <button
+              key={item.key}
+              className={`nav-item${active ? " active" : ""}`}
+              onClick={() => navigate(item.key)}
+            >
+              <Icon size={16} aria-hidden="true" />
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="nav-section-label">Pilotage</p>
       <div className="nav-group">
         {NAV_ACTIVE.map((item) => {
           const Icon = item.icon;

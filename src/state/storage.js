@@ -25,8 +25,12 @@ function safeBool(v) {
 function atelierFromRow(r) {
   return {
     id: r.id,
+    catalogueId: r.catalogue_id || null,
+    nom: safeText(r.nom),
     theme: safeText(r.theme),
     date: safeText(r.date),
+    heure: safeText(r.heure),
+    statut: safeText(r.statut) || "ouvert",
     prixParticipant: safeNumberField(r.prix_participant),
     participants: safeNumberField(r.participants),
     coutMatiere: safeNumberField(r.cout_matiere),
@@ -42,8 +46,12 @@ function atelierFromRow(r) {
 function atelierToRow(a) {
   return {
     id: a.id,
+    catalogue_id: a.catalogueId || null,
+    nom: a.nom || null,
     theme: a.theme,
     date: a.date,
+    heure: a.heure || null,
+    statut: a.statut || "ouvert",
     prix_participant: a.prixParticipant === "" || a.prixParticipant == null ? null : Number(a.prixParticipant),
     participants: a.participants === "" || a.participants == null ? null : Number(a.participants),
     cout_matiere: a.coutMatiere === "" || a.coutMatiere == null ? null : Number(a.coutMatiere),
@@ -53,6 +61,68 @@ function atelierToRow(a) {
     materials: a.materials || [],
     communique: !!a.communique,
     created_at: a.createdAt
+  };
+}
+
+function catalogueFromRow(r) {
+  return {
+    id: r.id,
+    nom: safeText(r.nom),
+    categorie: safeText(r.categorie),
+    photoPath: safeText(r.photo_path),
+    description: safeText(r.description),
+    prixParticipant: safeNumberField(r.prix_participant),
+    placesMax: safeNumberField(r.places_max),
+    dureeMin: safeNumberField(r.duree_min),
+    prepMin: safeNumberField(r.prep_min),
+    coutMatiere: safeNumberField(r.cout_matiere),
+    difficulte: safeText(r.difficulte),
+    publicConseille: safeText(r.public_conseille),
+    materials: safeArray(r.materials),
+    conseils: safeText(r.conseils),
+    actif: r.actif !== false,
+    instagramPost: safeText(r.instagram_post),
+    instagramStory: safeText(r.instagram_story),
+    instagramReel: safeText(r.instagram_reel),
+    facebookPost: safeText(r.facebook_post),
+    texteSite: safeText(r.texte_site),
+    hashtags: safeText(r.hashtags),
+    medias: safeArray(r.medias),
+    createdAt: r.created_at,
+    updatedAt: r.updated_at
+  };
+}
+
+function toNullableNumber(v) {
+  return v === "" || v == null ? null : Number(v);
+}
+
+function catalogueToRow(c) {
+  return {
+    id: c.id,
+    nom: c.nom,
+    categorie: c.categorie,
+    photo_path: c.photoPath || null,
+    description: c.description || "",
+    prix_participant: toNullableNumber(c.prixParticipant),
+    places_max: toNullableNumber(c.placesMax),
+    duree_min: toNullableNumber(c.dureeMin),
+    prep_min: toNullableNumber(c.prepMin),
+    cout_matiere: toNullableNumber(c.coutMatiere),
+    difficulte: c.difficulte || null,
+    public_conseille: c.publicConseille || "",
+    materials: c.materials || [],
+    conseils: c.conseils || "",
+    actif: c.actif !== false,
+    instagram_post: c.instagramPost || "",
+    instagram_story: c.instagramStory || "",
+    instagram_reel: c.instagramReel || "",
+    facebook_post: c.facebookPost || "",
+    texte_site: c.texteSite || "",
+    hashtags: c.hashtags || "",
+    medias: c.medias || [],
+    created_at: c.createdAt,
+    updated_at: new Date().toISOString()
   };
 }
 
@@ -120,4 +190,42 @@ export async function upsertStock(list) {
 export async function deleteStockRow(id) {
   const { error } = await supabase.from("stock").delete().eq("id", id);
   if (error) console.error("Erreur de suppression de la matière", error);
+}
+
+// --- Catalogue (modèles d'ateliers) -----------------------------------
+
+export async function loadCatalogue() {
+  const { data, error } = await supabase
+    .from("catalogue_ateliers")
+    .select("*")
+    .order("nom", { ascending: true });
+  if (error) {
+    console.error("Erreur de chargement du catalogue", error);
+    return [];
+  }
+  return (data || []).map(catalogueFromRow);
+}
+
+export async function upsertCatalogueItem(item) {
+  if (!item) return { error: new Error("Modèle catalogue manquant") };
+  const row = catalogueToRow(item);
+  const { data, error } = await supabase
+    .from("catalogue_ateliers")
+    .upsert(row)
+    .select("*")
+    .single();
+  if (error) {
+    console.error("Erreur de sauvegarde du modèle catalogue", error);
+    return { error };
+  }
+  return { data: catalogueFromRow(data) };
+}
+
+export async function deleteCatalogueRow(id) {
+  const { error } = await supabase.from("catalogue_ateliers").delete().eq("id", id);
+  if (error) {
+    console.error("Erreur de suppression du modèle catalogue", error);
+    return { error };
+  }
+  return { error: null };
 }

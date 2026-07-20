@@ -3,9 +3,10 @@
 // Aucun composant d'écran ne modifie l'état directement.
 
 export const initialState = {
-  screen: "dashboard",
+  screen: "catalogue",
   ateliers: [],
   stock: [],
+  catalogue: [],
   prefill: null,
   loading: true
 };
@@ -13,7 +14,28 @@ export const initialState = {
 export function appReducer(state, action) {
   switch (action.type) {
     case "INIT_DATA":
-      return { ...state, ateliers: action.ateliers, stock: action.stock, loading: false };
+      return {
+        ...state,
+        ateliers: action.ateliers,
+        stock: action.stock,
+        catalogue: action.catalogue ?? state.catalogue,
+        loading: false
+      };
+
+    case "SET_CATALOGUE":
+      return { ...state, catalogue: action.catalogue };
+
+    case "ADD_CATALOGUE":
+      return { ...state, catalogue: [...state.catalogue, action.item] };
+
+    case "UPDATE_CATALOGUE":
+      return {
+        ...state,
+        catalogue: state.catalogue.map((c) => (c.id === action.item.id ? action.item : c))
+      };
+
+    case "DELETE_CATALOGUE":
+      return { ...state, catalogue: state.catalogue.filter((c) => c.id !== action.id) };
 
     case "NAVIGATE":
       return { ...state, screen: action.screen, prefill: action.prefill || null };

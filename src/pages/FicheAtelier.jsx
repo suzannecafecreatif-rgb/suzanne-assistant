@@ -64,8 +64,15 @@ export default function FicheAtelier({ prefill, stock, onSave, onUpdate, navigat
 
   return (
     <div>
-      <p className="page-title">{editingRecord ? "Modifier l'atelier" : "Nouvel atelier"}</p>
-      <p className="page-sub">Quelques chiffres suffisent, tu peux toujours compléter plus tard.</p>
+      <div className="redirect-banner">
+        <p>Tu veux créer un <strong>modèle réutilisable</strong> (photo, fiche, communication) ?</p>
+        <button type="button" className="btn btn-ghost btn-small" onClick={() => navigate("catalogue")}>
+          Aller au Catalogue
+        </button>
+      </div>
+
+      <p className="page-title">{editingRecord ? "Modifier l'atelier" : "Planifier une session"}</p>
+      <p className="page-sub">Choisis une date et saisis les infos pour une occurrence planifiée. Pour un modèle permanent, utilise le Catalogue.</p>
 
       <div className="card form-card">
         <div className="field-row">

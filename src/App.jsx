@@ -7,17 +7,21 @@ import Historique from "./pages/Historique.jsx";
 import Rentabilite from "./pages/Rentabilite.jsx";
 import Stocks from "./pages/Stocks.jsx";
 import Planning from "./pages/Planning.jsx";
+import Catalogue from "./pages/Catalogue.jsx";
+import FicheCatalogue from "./pages/FicheCatalogue.jsx";
 import { appReducer, initialState } from "./state/appReducer.js";
 import {
   loadAteliers, upsertAteliers, deleteAtelierRow,
-  loadStock, upsertStock, deleteStockRow
+  loadStock, upsertStock, deleteStockRow,
+  loadCatalogue, upsertCatalogueItem, deleteCatalogueRow
 } from "./state/storage.js";
+import { deleteCatalogueModelFiles } from "./lib/storageUpload.js";
 import { supabase } from "./lib/supabaseClient.js";
 
 export default function App() {
   const [session, setSession] = useState(undefined); // undefined = pas encore vérifié
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const { screen, ateliers, stock, prefill, loading } = state;
+  const { screen, ateliers, stock, catalogue, prefill, loading } = state;
 
   // --- Authentification ------------------------------------------------
   useEffect(() => {
@@ -35,8 +39,8 @@ export default function App() {
   // --- Chargement des données une fois connectée ------------------------
   useEffect(() => {
     if (!session) return;
-    Promise.all([loadAteliers(), loadStock()]).then(([a, s]) => {
-      dispatch({ type: "INIT_DATA", ateliers: a, stock: s });
+    Promise.all([loadAteliers(), loadStock(), loadCatalogue()]).then(([a, s, c]) => {
+      dispatch({ type: "INIT_DATA", ateliers: a, stock: s, catalogue: c });
     });
   }, [session]);
 
@@ -68,6 +72,43 @@ export default function App() {
   const handleAddStock = useCallback((item) => dispatch({ type: "ADD_STOCK", item }), []);
   const handleUpdateStock = useCallback((item) => dispatch({ type: "UPDATE_STOCK", item }), []);
 
+  const handleDuplicateCatalogue = useCallback((item) => {
+    navigate("catalogue", { flash: `Dupliquer « ${item.nom || "ce modèle"} » — disponible à l'étape F.` });
+  }, [navigate]);
+
+  const handleSaveCatalogue = useCallback(async (item) => {
+    const { data, error } = await upsertCatalogueItem(item);
+    if (data) {
+      const exists = catalogue.some((c) => c.id === data.id);
+      dispatch({ type: exists ? "UPDATE_CATALOGUE" : "ADD_CATALOGUE", item: data });
+      navigate("catalogue", { flash: "Modèle enregistré." });
+    }
+    return { data, error };
+  }, [catalogue, navigate]);
+
+  const handleUpdateCatalogue = useCallback(async (item) => {
+    const { data, error } = await upsertCatalogueItem(item);
+    if (data) {
+      dispatch({ type: "UPDATE_CATALOGUE", item: data });
+      navigate("catalogue", { flash: "Modifications enregistrées." });
+    }
+    return { data, error };
+  }, [navigate]);
+
+  const handleDeleteCatalogue = useCallback(async (item) => {
+    const { error } = await deleteCatalogueRow(item.id);
+    if (error) return { error };
+
+    const { error: storageError } = await deleteCatalogueModelFiles(item);
+    if (storageError) {
+      console.error("Erreur suppression fichiers catalogue", storageError);
+    }
+
+    dispatch({ type: "DELETE_CATALOGUE", id: item.id });
+    navigate("catalogue", { flash: "Modèle supprimé." });
+    return { error: null };
+  }, [navigate]);
+
   const handleDeleteStock = useCallback((id) => {
     dispatch({ type: "DELETE_STOCK", id });
     deleteStockRow(id);
@@ -90,6 +131,23 @@ export default function App() {
           <p className="page-sub">Chargement...</p>
         ) : screen === "dashboard" ? (
           <Dashboard ateliers={ateliers} stock={stock} onUpdate={handleUpdateAtelier} navigate={navigate} />
+        ) : screen === "catalogue" ? (
+          <Catalogue
+            catalogue={catalogue}
+            navigate={navigate}
+            prefill={prefill}
+            onDuplicate={handleDuplicateCatalogue}
+            onDelete={handleDeleteCatalogue}
+          />
+        ) : screen === "catalogue-fiche" ? (
+          <FicheCatalogue
+            prefill={prefill}
+            stock={stock}
+            onSave={handleSaveCatalogue}
+            onUpdate={handleUpdateCatalogue}
+            onDelete={handleDeleteCatalogue}
+            navigate={navigate}
+          />
         ) : screen === "fiche" ? (
           <FicheAtelier prefill={prefill} stock={stock} onSave={handleSave} onUpdate={handleUpdateAtelier} navigate={navigate} />
         ) : screen === "historique" ? (
