@@ -693,6 +693,21 @@ body {
 .planning-detail-hint {
   font-size: 11.5px; color: var(--terracotta-dark); font-weight: 500; margin: 8px 0 0;
 }
+.planning-evenement-detail-modal .planning-modal-fields { border-top: none; }
+.planning-detail-revenu {
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--cream-2); border-radius: 10px; padding: 12px 14px;
+}
+.planning-detail-revenu-label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.planning-detail-revenu-value {
+  font-size: 22px; font-weight: 700; color: var(--terracotta-dark); line-height: 1.2;
+}
+.planning-detail-revenu-hint {
+  font-size: 11.5px; color: var(--ink-soft);
+}
 .planning-detail-footer {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   flex-wrap: wrap; padding-top: 4px; margin-top: auto;

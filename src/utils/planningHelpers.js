@@ -558,6 +558,49 @@ export function buildEvenementFromForm(fields) {
   });
 }
 
+/** Initialise le formulaire détail événement ponctuel (E-C). */
+export function initEvenementDetailForm(session) {
+  return {
+    nom: session.nom || "",
+    intervenant: session.intervenant || "",
+    typeActivite: session.typeActivite || "",
+    date: session.date || "",
+    heure: session.heure || "",
+    modeRemuneration: normalizeRemunerationMode(session.modeRemuneration),
+    prixParticipant: session.prixParticipant ?? "",
+    montantSuzanne: session.montantSuzanne ?? "",
+    prixPublicParticipant: session.prixPublicParticipant ?? "",
+    placesMax: session.placesMax ?? "",
+    inscrits: session.participants ?? "",
+    notes: session.notes || ""
+  };
+}
+
+/** Affiche le revenu Suzanne calculé pour une session. */
+export function formatRevenuSuzanne(session) {
+  const amount = computeRevenuSuzanne(session);
+  if (!Number.isFinite(amount) || amount <= 0) return "—";
+  return `${Math.round(amount).toLocaleString("fr-FR")} €`;
+}
+
+/** Applique les champs du formulaire détail à une session événement (E-C). */
+export function patchEvenementFromForm(session, form) {
+  return patchEvenementSession(session, {
+    nom: form.nom,
+    intervenant: form.intervenant,
+    typeActivite: form.typeActivite,
+    date: form.date,
+    heure: form.heure,
+    modeRemuneration: form.modeRemuneration,
+    prixParticipant: form.prixParticipant,
+    montantSuzanne: form.montantSuzanne,
+    prixPublicParticipant: form.prixPublicParticipant,
+    placesMax: form.placesMax,
+    inscrits: form.inscrits,
+    notes: form.notes
+  });
+}
+
 /** Duplique une session (snapshots conservés) avec nouvelle date/heure. */
 export function duplicateSession(session, options = {}) {
   if (!session) return null;

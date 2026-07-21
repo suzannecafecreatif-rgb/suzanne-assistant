@@ -4,7 +4,8 @@ import { mondayOf, addDays, isoDate, formatMonthLabel } from "../utils/dateHelpe
 import PlanningSessionChip, { enrichSessions, sortSessionsByHeure } from "../components/PlanningSessionChip.jsx";
 import PlanningAddModal from "../components/PlanningAddModal.jsx";
 import PlanningDetailModal from "../components/PlanningDetailModal.jsx";
-import { enrichSession, SESSION_KIND } from "../utils/planningHelpers.js";
+import PlanningEvenementDetailModal from "../components/PlanningEvenementDetailModal.jsx";
+import { enrichSession, isEvenementSession, SESSION_KIND } from "../utils/planningHelpers.js";
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -257,7 +258,17 @@ export default function Planning({
         />
       )}
 
-      {detailSession && (
+      {detailSession && isEvenementSession(detailSession) && (
+        <PlanningEvenementDetailModal
+          session={detailSession}
+          onClose={() => setDetailSessionId(null)}
+          onUpdate={handleUpdate}
+          onSaveDuplicate={handleSaveDuplicate}
+          onDelete={handleDelete}
+        />
+      )}
+
+      {detailSession && !isEvenementSession(detailSession) && (
         <PlanningDetailModal
           session={detailSession}
           onClose={() => setDetailSessionId(null)}

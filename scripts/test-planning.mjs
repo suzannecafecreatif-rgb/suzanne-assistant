@@ -13,10 +13,12 @@ import {
   duplicateSession,
   enrichSession,
   EVENEMENT_COLOR,
+  formatRevenuSuzanne,
   getSessionDisplayName,
   getSessionFillRate,
   getSessionTypeColor,
   getUiRemunerationModeOptions,
+  initEvenementDetailForm,
   isActivitySession,
   isBlockedSlot,
   isCatalogueSession,
@@ -27,6 +29,7 @@ import {
   normalizeSessionStatut,
   patchBlockedSlot,
   patchCatalogueSession,
+  patchEvenementFromForm,
   patchEvenementSession,
   REMUNERATION_MODE,
   SESSION_KIND,
@@ -287,6 +290,29 @@ const formForfait = buildEvenementFromForm({
 assert(formForfait.modeRemuneration === REMUNERATION_MODE.FORFAIT, "Form forfait mode");
 assert(computeRevenuSuzanne(formForfait) === 45, "Form forfait revenu 45 €");
 assert(formForfait.prixPublicParticipant === 35, "Tarif intervenante conservé");
+
+console.log("\n=== Scénario 12 — Fiche détail événement (E-C) ===");
+const detailForm = initEvenementDetailForm(carnetEmotions);
+assert(detailForm.nom === "Carnet des émotions", "Init form nom");
+assert(detailForm.intervenant === "Intervenante extérieure", "Init form intervenant");
+assert(detailForm.modeRemuneration === REMUNERATION_MODE.FORFAIT, "Init form mode");
+assert(detailForm.inscrits === 8, "Init form inscrits");
+assert(formatRevenuSuzanne(carnetEmotions) === "45 €", "Affichage revenu forfait");
+const patchedDetail = patchEvenementFromForm(carnetEmotions, {
+  ...detailForm,
+  nom: "Carnet des émotions — édition",
+  inscrits: 10,
+  notes: "Mise à jour fiche"
+});
+assert(patchedDetail.nom === "Carnet des émotions — édition", "Patch detail nom");
+assert(patchedDetail.participants === 10, "Patch detail inscrits");
+assert(patchedDetail.notes === "Mise à jour fiche", "Patch detail notes");
+assert(computeRevenuSuzanne(patchedDetail) === 45, "Revenu inchangé après patch inscrits forfait");
+const encaissementDetail = patchEvenementFromForm(evenement, {
+  ...initEvenementDetailForm(evenement),
+  inscrits: 20
+});
+assert(computeRevenuSuzanne(encaissementDetail) === 35 * 20, "Revenu encaissement recalculé");
 
 console.log(`\n=== Résultat : ${passed} ok, ${failed} échec(s) ===`);
 process.exit(failed > 0 ? 1 : 0);
