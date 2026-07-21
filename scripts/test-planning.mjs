@@ -5,6 +5,7 @@
 import {
   ACTIVITY_TYPE_COLORS,
   BLOCKED_SLOT_COLOR,
+  computeRevenuSuzanne,
   createBlockedSlot,
   createEvenementSession,
   createSessionFromCatalogue,
@@ -18,14 +19,17 @@ import {
   isCatalogueSession,
   isEvenementSession,
   isFinancialSession,
+  normalizeRemunerationMode,
   normalizeSessionKind,
   normalizeSessionStatut,
   patchBlockedSlot,
   patchCatalogueSession,
   patchEvenementSession,
+  REMUNERATION_MODE,
   SESSION_KIND,
   SESSION_STATUTS
 } from "../src/utils/planningHelpers.js";
+import { computeMetrics } from "../src/utils/metrics.js";
 
 let passed = 0;
 let failed = 0;
@@ -156,6 +160,7 @@ assert(isActivitySession(evenement), "isActivitySession");
 assert(isFinancialSession(evenement), "isFinancialSession");
 assert(evenement.catalogueId == null, "Sans catalogue_id");
 assert(evenement.intervenant === "Marie Dupont", "Intervenant");
+assert(evenement.modeRemuneration === REMUNERATION_MODE.ENCAISSEMENT, "Mode par défaut encaissement");
 assert(evenement.participants === 12, "Nombre d'inscrits");
 assert(evenement.typeActivite === "Atelier intervenant", "Type activité");
 assert(getSessionTypeColor(evenement) === ACTIVITY_TYPE_COLORS["Atelier intervenant"], "Couleur type");
@@ -172,6 +177,59 @@ assert(normalizeSessionKind(undefined) === SESSION_KIND.CATALOGUE, "Legacy kind 
 assert(normalizeSessionKind("evenement") === SESSION_KIND.EVENEMENT, "normalizeSessionKind evenement");
 const dupEvt = duplicateSession(evenement, { date: "2026-12-01", heure: "19:00" });
 assert(dupEvt.intervenant === evenement.intervenant, "Duplication conserve intervenant");
+assert(dupEvt.modeRemuneration === evenement.modeRemuneration, "Duplication conserve mode");
+
+console.log("\n=== Scénario 10 — Modes de rémunération (E-A révisé) ===");
+assert(computeRevenuSuzanne(evenement) === 35 * 12, "Encaissement : prix × inscrits");
+
+const carnetEmotions = createEvenementSession({
+  nom: "Carnet des émotions",
+  intervenant: "Intervenante extérieure",
+  typeActivite: "Atelier intervenant",
+  date: "2026-11-12",
+  heure: "14:00",
+  modeRemuneration: REMUNERATION_MODE.FORFAIT,
+  montantSuzanne: 45,
+  prixPublicParticipant: 35,
+  placesMax: 12,
+  inscrits: 8,
+  coutMatiere: 10,
+  prepMin: 30,
+  animMin: 60
+});
+assert(carnetEmotions.modeRemuneration === REMUNERATION_MODE.FORFAIT, "Mode forfait");
+assert(computeRevenuSuzanne(carnetEmotions) === 45, "Forfait : 45 € revenu Suzanne");
+assert(computeRevenuSuzanne(carnetEmotions) !== 35 * 8, "Tarif intervenante exclu du CA");
+const metricsForfait = computeMetrics(carnetEmotions);
+assert(metricsForfait.revenue === 45, "Metrics revenue forfait");
+assert(metricsForfait.marge === 35, "Marge = forfait − coût matière");
+assert(Math.round(metricsForfait.revenuHoraire) === 23, "Revenu/h déduit temps prep + anim");
+
+const patchedForfait = patchEvenementSession(carnetEmotions, { montantSuzanne: 50, inscrits: 10 });
+assert(computeRevenuSuzanne(patchedForfait) === 50, "Patch montant forfait");
+assert(patchedForfait.participants === 10, "Inscrits modifiables en forfait");
+
+const pourcentage = createEvenementSession({
+  nom: "Commission future",
+  modeRemuneration: REMUNERATION_MODE.POURCENTAGE,
+  prixPublicParticipant: 40,
+  remunerationTaux: 10,
+  inscrits: 8
+});
+assert(normalizeRemunerationMode(REMUNERATION_MODE.POURCENTAGE) === REMUNERATION_MODE.POURCENTAGE, "Mode pourcentage normalisé");
+assert(computeRevenuSuzanne(pourcentage) === 32, "Pourcentage : 40 × 8 × 10 %");
+
+const montantParPers = createEvenementSession({
+  nom: "Commission fixe future",
+  modeRemuneration: REMUNERATION_MODE.MONTANT_PAR_PARTICIPANT,
+  montantSuzanne: 5,
+  inscrits: 8
+});
+assert(computeRevenuSuzanne(montantParPers) === 40, "Montant fixe / participant : 5 × 8");
+
+assert(computeRevenuSuzanne(session) === 45 * 8, "Catalogue inchangé : prix × inscrits");
+assert(computeRevenuSuzanne(bloque) === 0, "Créneau bloqué : revenu 0");
+assert(normalizeRemunerationMode(undefined, SESSION_KIND.CATALOGUE) === null, "Catalogue sans mode");
 
 console.log(`\n=== Résultat : ${passed} ok, ${failed} échec(s) ===`);
 process.exit(failed > 0 ? 1 : 0);

@@ -251,6 +251,28 @@ alter table ateliers add constraint ateliers_kind_check
 -- E-A — Événements ponctuels (sans lien catalogue)
 alter table ateliers add column if not exists intervenant text;
 
+-- E-A révisé — modes de rémunération (événements ponctuels)
+alter table ateliers add column if not exists mode_remuneration text;
+alter table ateliers add column if not exists montant_suzanne numeric;
+alter table ateliers add column if not exists remuneration_taux numeric;
+alter table ateliers add column if not exists prix_public_participant numeric;
+
+update ateliers
+set mode_remuneration = 'encaissement'
+where kind = 'evenement' and mode_remuneration is null;
+
+alter table ateliers drop constraint if exists ateliers_mode_remuneration_check;
+alter table ateliers add constraint ateliers_mode_remuneration_check
+  check (
+    mode_remuneration is null
+    or mode_remuneration in (
+      'encaissement',
+      'forfait',
+      'pourcentage',
+      'montant_par_participant'
+    )
+  );
+
 alter table ateliers drop constraint if exists ateliers_statut_check;
 alter table ateliers add constraint ateliers_statut_check
   check (statut in ('Prévu', 'Réservations ouvertes', 'Complet', 'Privé', 'Annulé'));

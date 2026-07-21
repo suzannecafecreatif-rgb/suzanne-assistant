@@ -116,6 +116,24 @@ export const ACTIVITY_TYPE_COLORS = {
 
 export const BLOCKED_SLOT_COLOR = "#8a8178";
 
+/** Modes de rémunération pour les événements ponctuels (E-A révisé). */
+export const REMUNERATION_MODE = {
+  ENCAISSEMENT: "encaissement",
+  FORFAIT: "forfait",
+  POURCENTAGE: "pourcentage",
+  MONTANT_PAR_PARTICIPANT: "montant_par_participant"
+};
+
+/** Libellés UI — seuls encaissement et forfait sont exposés en E-B. */
+export const REMUNERATION_MODE_LABELS = {
+  [REMUNERATION_MODE.ENCAISSEMENT]: "Encaissement par Suzanne",
+  [REMUNERATION_MODE.FORFAIT]: "Location de salle / forfait fixe",
+  [REMUNERATION_MODE.POURCENTAGE]: "Pourcentage sur les ventes",
+  [REMUNERATION_MODE.MONTANT_PAR_PARTICIPANT]: "Montant fixe par participant"
+};
+
+export const DEFAULT_REMUNERATION_MODE = REMUNERATION_MODE.ENCAISSEMENT;
+
 function toNumber(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
@@ -155,6 +173,48 @@ export function isFinancialSession(session) {
 /** Éligible au bloc « Publications à préparer » (hors statut / communique gérés ailleurs). */
 export function isPromotableSession(session) {
   return isActivitySession(session);
+}
+
+/** Normalise le mode de rémunération (événements ponctuels uniquement). */
+export function normalizeRemunerationMode(mode, sessionKind = SESSION_KIND.EVENEMENT) {
+  if (sessionKind !== SESSION_KIND.EVENEMENT) return null;
+  if (
+    mode === REMUNERATION_MODE.FORFAIT
+    || mode === REMUNERATION_MODE.POURCENTAGE
+    || mode === REMUNERATION_MODE.MONTANT_PAR_PARTICIPANT
+  ) {
+    return mode;
+  }
+  return DEFAULT_REMUNERATION_MODE;
+}
+
+/**
+ * Revenu réellement perçu par Suzanne pour une session.
+ * Catalogue : prix × inscrits. Événement : selon mode_remuneration.
+ */
+export function computeRevenuSuzanne(session) {
+  if (!session || isBlockedSlot(session)) return 0;
+
+  if (isEvenementSession(session)) {
+    const mode = normalizeRemunerationMode(session.modeRemuneration, session.kind);
+    const inscrits = toNumber(session.participants);
+
+    switch (mode) {
+      case REMUNERATION_MODE.FORFAIT:
+        return toNumber(session.montantSuzanne);
+      case REMUNERATION_MODE.POURCENTAGE: {
+        const ventes = toNumber(session.prixPublicParticipant) * inscrits;
+        return ventes * (toNumber(session.remunerationTaux) / 100);
+      }
+      case REMUNERATION_MODE.MONTANT_PAR_PARTICIPANT:
+        return toNumber(session.montantSuzanne) * inscrits;
+      case REMUNERATION_MODE.ENCAISSEMENT:
+      default:
+        return toNumber(session.prixParticipant) * inscrits;
+    }
+  }
+
+  return toNumber(session.prixParticipant) * toNumber(session.participants);
 }
 
 /** Nom affiché dans le calendrier. */
@@ -291,6 +351,10 @@ export function createEvenementSession(options = {}) {
     notes = "",
     statut = DEFAULT_SESSION_STATUT,
     communique = false,
+    modeRemuneration = DEFAULT_REMUNERATION_MODE,
+    montantSuzanne = "",
+    remunerationTaux = "",
+    prixPublicParticipant = "",
     id,
     createdAt
   } = options;
@@ -317,6 +381,10 @@ export function createEvenementSession(options = {}) {
     heureFin: "",
     libelle: "",
     intervenant: (intervenant || "").trim(),
+    modeRemuneration: normalizeRemunerationMode(modeRemuneration),
+    montantSuzanne,
+    remunerationTaux,
+    prixPublicParticipant,
     participants: inscritsValue,
     statut: normalizeSessionStatut(statut),
     notes: notes || "",
@@ -422,6 +490,12 @@ export function patchEvenementSession(session, patch = {}) {
     prepMin: patch.prepMin ?? session.prepMin,
     animMin: patch.animMin ?? session.animMin,
     coutMatiere: patch.coutMatiere ?? session.coutMatiere,
+    modeRemuneration: patch.modeRemuneration != null
+      ? normalizeRemunerationMode(patch.modeRemuneration)
+      : session.modeRemuneration,
+    montantSuzanne: patch.montantSuzanne ?? session.montantSuzanne,
+    remunerationTaux: patch.remunerationTaux ?? session.remunerationTaux,
+    prixPublicParticipant: patch.prixPublicParticipant ?? session.prixPublicParticipant,
     statut: patch.statut != null ? normalizeSessionStatut(patch.statut) : session.statut,
     notes: patch.notes ?? session.notes,
     communique: patch.communique != null ? !!patch.communique : session.communique
