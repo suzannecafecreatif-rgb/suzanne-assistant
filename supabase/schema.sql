@@ -276,3 +276,22 @@ alter table ateliers add constraint ateliers_mode_remuneration_check
 alter table ateliers drop constraint if exists ateliers_statut_check;
 alter table ateliers add constraint ateliers_statut_check
   check (statut in ('Prévu', 'Réservations ouvertes', 'Complet', 'Privé', 'Annulé'));
+
+-- R-B — Journal Amelia webhooks (réception uniquement)
+create table if not exists amelia_webhook_events (
+  id uuid primary key default gen_random_uuid(),
+  received_at timestamptz not null default now(),
+  event_type text,
+  event_action text,
+  payload jsonb not null,
+  processed boolean not null default false,
+  processing_error text
+);
+
+alter table amelia_webhook_events enable row level security;
+
+create index if not exists amelia_webhook_events_received_at_idx
+  on amelia_webhook_events (received_at desc);
+
+create index if not exists amelia_webhook_events_processed_idx
+  on amelia_webhook_events (processed);
