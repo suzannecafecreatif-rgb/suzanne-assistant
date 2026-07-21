@@ -154,6 +154,8 @@ export default function App() {
             catalogue={catalogue}
             prefill={prefill}
             onSaveSession={handleSave}
+            onUpdateSession={handleUpdateAtelier}
+            onDeleteSession={handleDelete}
             navigate={navigate}
           />
         ) : screen === "historique" ? (

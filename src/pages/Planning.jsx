@@ -3,7 +3,8 @@ import { ArrowLeft, ArrowRight, Ban, BookOpen, Plus, X } from "lucide-react";
 import { mondayOf, addDays, isoDate, formatMonthLabel } from "../utils/dateHelpers.js";
 import PlanningSessionChip, { enrichSessions, sortSessionsByHeure } from "../components/PlanningSessionChip.jsx";
 import PlanningAddModal from "../components/PlanningAddModal.jsx";
-import { SESSION_KIND } from "../utils/planningHelpers.js";
+import PlanningDetailModal from "../components/PlanningDetailModal.jsx";
+import { enrichSession, SESSION_KIND } from "../utils/planningHelpers.js";
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
@@ -36,10 +37,19 @@ function PlanningDayAddMenu({ dateIso, onSelect, onClose }) {
   );
 }
 
-export default function Planning({ ateliers, catalogue = [], prefill, onSaveSession, navigate }) {
+export default function Planning({
+  ateliers,
+  catalogue = [],
+  prefill,
+  onSaveSession,
+  onUpdateSession,
+  onDeleteSession,
+  navigate
+}) {
   const [refDate, setRefDate] = useState(new Date());
   const [addMenuDate, setAddMenuDate] = useState(null);
   const [addModal, setAddModal] = useState(null);
+  const [detailSessionId, setDetailSessionId] = useState(null);
   const [notice, setNotice] = useState("");
   const todayIso = isoDate(new Date());
 
@@ -53,6 +63,22 @@ export default function Planning({ ateliers, catalogue = [], prefill, onSaveSess
     if (!prefill?.openAdd || !prefill?.date) return;
     setAddMenuDate(prefill.date);
   }, [prefill?.openAdd, prefill?.date]);
+
+  useEffect(() => {
+    if (!prefill?.focusSession) return;
+    const target = ateliers.find((a) => a.id === prefill.focusSession);
+    if (!target) return;
+    if (target.date) {
+      setRefDate(new Date(`${target.date}T12:00:00`));
+    }
+    setDetailSessionId(target.id);
+  }, [prefill?.focusSession, ateliers]);
+
+  const detailSession = useMemo(() => {
+    if (!detailSessionId) return null;
+    const raw = ateliers.find((a) => a.id === detailSessionId);
+    return raw ? enrichSession(raw, catalogue) : null;
+  }, [detailSessionId, ateliers, catalogue]);
 
   const sessionsByDate = useMemo(() => {
     const enriched = enrichSessions(ateliers, catalogue);
@@ -75,6 +101,11 @@ export default function Planning({ ateliers, catalogue = [], prefill, onSaveSess
   const goNext = () => setRefDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   const goToday = () => setRefDate(new Date());
 
+  const showNotice = (message) => {
+    setNotice(message);
+    setTimeout(() => setNotice(""), 3500);
+  };
+
   const handleAddSelect = (kind) => {
     const date = addMenuDate;
     setAddMenuDate(null);
@@ -90,8 +121,30 @@ export default function Planning({ ateliers, catalogue = [], prefill, onSaveSess
     if (!onSaveSession) return;
     await onSaveSession(record);
     setAddModal(null);
-    setNotice("Activité ajoutée au planning.");
-    setTimeout(() => setNotice(""), 3500);
+    showNotice("Activité ajoutée au planning.");
+  };
+
+  const handleUpdate = async (record) => {
+    if (!onUpdateSession) return;
+    await onUpdateSession(record);
+    showNotice("Session mise à jour.");
+  };
+
+  const handleSaveDuplicate = async (record) => {
+    if (!onSaveSession) return;
+    await onSaveSession(record);
+    showNotice("Session dupliquée.");
+  };
+
+  const handleDelete = async (id) => {
+    if (!onDeleteSession) return;
+    await onDeleteSession(id);
+    showNotice("Session supprimée.");
+  };
+
+  const openDetail = (session) => {
+    setAddMenuDate(null);
+    setDetailSessionId(session.id);
   };
 
   return (
@@ -150,7 +203,11 @@ export default function Planning({ ateliers, catalogue = [], prefill, onSaveSess
 
                 <div className="planning-day-sessions">
                   {items.map((session) => (
-                    <PlanningSessionChip key={session.id} session={session} />
+                    <PlanningSessionChip
+                      key={session.id}
+                      session={session}
+                      onClick={openDetail}
+                    />
                   ))}
                 </div>
 
@@ -189,6 +246,16 @@ export default function Planning({ ateliers, catalogue = [], prefill, onSaveSess
           onClose={() => setAddModal(null)}
           onSave={handleSave}
           navigate={navigate}
+        />
+      )}
+
+      {detailSession && (
+        <PlanningDetailModal
+          session={detailSession}
+          onClose={() => setDetailSessionId(null)}
+          onUpdate={handleUpdate}
+          onSaveDuplicate={handleSaveDuplicate}
+          onDelete={handleDelete}
         />
       )}
     </div>

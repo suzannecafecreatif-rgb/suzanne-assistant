@@ -315,3 +315,21 @@ export function patchBlockedSlot(session, patch = {}) {
     notes: patch.notes ?? session.notes
   };
 }
+
+/** Duplique une session (snapshots conservés) avec nouvelle date/heure. */
+export function duplicateSession(session, options = {}) {
+  if (!session) return null;
+
+  const date = options.date ?? session.date;
+  const heure = options.heure ?? session.heure ?? "";
+  const heureFin = options.heureFin ?? session.heureFin ?? "";
+
+  return {
+    ...session,
+    id: crypto.randomUUID(),
+    date,
+    heure,
+    heureFin: isBlockedSlot(session) ? heureFin : session.heureFin ?? "",
+    createdAt: new Date().toISOString()
+  };
+}

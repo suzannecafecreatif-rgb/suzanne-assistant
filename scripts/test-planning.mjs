@@ -7,6 +7,7 @@ import {
   BLOCKED_SLOT_COLOR,
   createBlockedSlot,
   createSessionFromCatalogue,
+  duplicateSession,
   enrichSession,
   getSessionDisplayName,
   getSessionFillRate,
@@ -115,6 +116,18 @@ assert(normalizeSessionStatut("prive") === "Privé", "prive → Privé");
 assert(normalizeSessionStatut("annule") === "Annulé", "annule → Annulé");
 assert(normalizeSessionStatut("terminé") === "Complet", "terminé → Complet");
 assert(normalizeSessionStatut("inconnu") === "Prévu", "valeur inconnue → Prévu");
+
+console.log("\n=== Scénario 8 — Duplication ===");
+const dupCatalogue = duplicateSession(session, { date: "2026-10-01", heure: "15:00" });
+assert(dupCatalogue.id !== session.id, "Nouvel id catalogue");
+assert(dupCatalogue.date === "2026-10-01", "Nouvelle date catalogue");
+assert(dupCatalogue.heure === "15:00", "Nouvelle heure catalogue");
+assert(dupCatalogue.nom === session.nom, "Snapshot nom conservé");
+assert(dupCatalogue.catalogueId === session.catalogueId, "Lien catalogue conservé");
+const dupBloque = duplicateSession(bloque, { date: "2026-10-02", heure: "09:00", heureFin: "12:00" });
+assert(dupBloque.id !== bloque.id, "Nouvel id bloqué");
+assert(dupBloque.heureFin === "12:00", "Nouvelle fin bloquée");
+assert(dupBloque.libelle === bloque.libelle, "Libellé conservé");
 
 console.log(`\n=== Résultat : ${passed} ok, ${failed} échec(s) ===`);
 process.exit(failed > 0 ? 1 : 0);
