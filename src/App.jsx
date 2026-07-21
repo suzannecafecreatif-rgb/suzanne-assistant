@@ -153,6 +153,7 @@ export default function App() {
             ateliers={ateliers}
             catalogue={catalogue}
             prefill={prefill}
+            onSaveSession={handleSave}
             navigate={navigate}
           />
         ) : screen === "historique" ? (

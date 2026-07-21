@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Ban, BookOpen, Plus, X } from "lucide-react";
 import { mondayOf, addDays, isoDate, formatMonthLabel } from "../utils/dateHelpers.js";
 import PlanningSessionChip, { enrichSessions, sortSessionsByHeure } from "../components/PlanningSessionChip.jsx";
+import PlanningAddModal from "../components/PlanningAddModal.jsx";
 import { SESSION_KIND } from "../utils/planningHelpers.js";
 
 const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
@@ -35,9 +36,10 @@ function PlanningDayAddMenu({ dateIso, onSelect, onClose }) {
   );
 }
 
-export default function Planning({ ateliers, catalogue = [], prefill, navigate }) {
+export default function Planning({ ateliers, catalogue = [], prefill, onSaveSession, navigate }) {
   const [refDate, setRefDate] = useState(new Date());
   const [addMenuDate, setAddMenuDate] = useState(null);
+  const [addModal, setAddModal] = useState(null);
   const [notice, setNotice] = useState("");
   const todayIso = isoDate(new Date());
 
@@ -73,14 +75,23 @@ export default function Planning({ ateliers, catalogue = [], prefill, navigate }
   const goNext = () => setRefDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   const goToday = () => setRefDate(new Date());
 
-  const handleAddSelect = () => {
+  const handleAddSelect = (kind) => {
+    const date = addMenuDate;
     setAddMenuDate(null);
-    setNotice("Formulaire d'ajout — prochaine étape (P-C).");
-    setTimeout(() => setNotice(""), 3500);
+    if (!date) return;
+    setAddModal({ date, kind });
   };
 
   const toggleAddMenu = (iso) => {
     setAddMenuDate((current) => (current === iso ? null : iso));
+  };
+
+  const handleSave = async (record) => {
+    if (!onSaveSession) return;
+    await onSaveSession(record);
+    setAddModal(null);
+    setNotice("Activité ajoutée au planning.");
+    setTimeout(() => setNotice(""), 3500);
   };
 
   return (
@@ -169,6 +180,17 @@ export default function Planning({ ateliers, catalogue = [], prefill, navigate }
           })}
         </div>
       </div>
+
+      {addModal && (
+        <PlanningAddModal
+          date={addModal.date}
+          kind={addModal.kind}
+          catalogue={catalogue}
+          onClose={() => setAddModal(null)}
+          onSave={handleSave}
+          navigate={navigate}
+        />
+      )}
     </div>
   );
 }
