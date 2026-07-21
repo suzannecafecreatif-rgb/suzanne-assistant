@@ -126,7 +126,19 @@ body {
 .session-badge-bloque {
   background: #eceae6; color: #6b6560; border: 0.5px solid #d8d3cc;
 }
-.today-theme { font-weight: 500; }
+.session-badge-ponctuel {
+  background: #fce4ef; color: #9c3d6b; border: 0.5px solid #efb8d0;
+}
+.today-theme { font-weight: 500; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dashboard-promote-label {
+  display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.historique-activity-text {
+  display: flex; flex-direction: column; gap: 2px; min-width: 0;
+}
+.historique-intervenant {
+  font-size: 11.5px; color: var(--ink-soft); font-weight: 400;
+}
 .today-detail { color: var(--ink-soft); }
 
 .promote-card { background: var(--cream-2); border-radius: 12px; padding: 0.85rem 1rem; margin-bottom: 1rem; }

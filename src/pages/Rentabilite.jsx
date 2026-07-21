@@ -6,6 +6,7 @@ import {
   getFinancialSessions,
   getSessionActivityName
 } from "../utils/planningQueries.js";
+import SessionBadge from "../components/SessionBadge.jsx";
 
 export default function Rentabilite({ ateliers, catalogue = [] }) {
   const rows = useMemo(() => {
@@ -58,6 +59,7 @@ export default function Rentabilite({ ateliers, catalogue = [] }) {
                   <th>Rang</th>
                   <th>Activité</th>
                   <th>Date</th>
+                  <th>CA Suzanne</th>
                   <th>Marge</th>
                   <th>Coût matière</th>
                   <th>Temps</th>
@@ -68,8 +70,14 @@ export default function Rentabilite({ ateliers, catalogue = [] }) {
                 {rows.map((a, i) => (
                   <tr key={a.id}>
                     <td>{i + 1}</td>
-                    <td>{a.activityName}</td>
+                    <td>
+                      <span className="historique-activity-cell">
+                        <span>{a.activityName}</span>
+                        <SessionBadge session={a} />
+                      </span>
+                    </td>
                     <td>{formatDateShort(a.date)}</td>
+                    <td>{formatMoney(a.revenue)}</td>
                     <td>{formatMoney(a.marge)}</td>
                     <td>{formatMoney(Number(a.coutMatiere) || 0)}</td>
                     <td>{a.heures ? `${a.heures.toFixed(1)} h` : "—"}</td>

@@ -9,7 +9,8 @@ import {
   getSessionsToday,
   getSessionsToPromote
 } from "../utils/planningQueries.js";
-import { getSessionDisplayName, isBlockedSlot, normalizeSessionStatut } from "../utils/planningHelpers.js";
+import { getSessionDisplayName, isBlockedSlot, isEvenementSession, normalizeSessionStatut } from "../utils/planningHelpers.js";
+import SessionBadge from "../components/SessionBadge.jsx";
 import { formatDateShort, formatDayLabel, capitalize, isoDate } from "../utils/dateHelpers.js";
 
 export default function Dashboard({ ateliers, catalogue = [], stock, onUpdate, navigate }) {
@@ -80,11 +81,17 @@ export default function Dashboard({ ateliers, catalogue = [], stock, onUpdate, n
                     onClick={() => openSession(session)}
                   >
                     <span className="dashboard-session-main">
-                      <span className="today-theme">{getSessionDisplayName(session)}</span>
+                      <span className="today-theme">
+                        {getSessionDisplayName(session)}
+                        <SessionBadge session={session} />
+                      </span>
                       <span className="today-detail">
                         {[
                           formatSessionHeure(session),
                           places,
+                          isEvenementSession(session) && session.intervenant?.trim()
+                            ? session.intervenant.trim()
+                            : null,
                           blocked ? "Créneau bloqué" : statut !== "Prévu" ? statut : null
                         ].filter(Boolean).join(" · ")}
                       </span>
@@ -116,7 +123,10 @@ export default function Dashboard({ ateliers, catalogue = [], stock, onUpdate, n
                     className="dashboard-session-link"
                     onClick={() => openSession(session)}
                   >
-                    {formatDashboardSessionSummary(session)} · {formatDateShort(session.date)}
+                    <span className="dashboard-promote-label">
+                      {formatDashboardSessionSummary(session)} · {formatDateShort(session.date)}
+                      <SessionBadge session={session} />
+                    </span>
                   </button>
                   <button
                     className="btn btn-ghost btn-small"
@@ -159,7 +169,7 @@ export default function Dashboard({ ateliers, catalogue = [], stock, onUpdate, n
                   </p>
                   <p className="mini-list-reason">
                     {freeSlotDays.map((d) => formatDayLabel(d)).join(" · ")}
-                    {" · "}sans activité catalogue planifiée
+                    {" · "}sans activité planifiée
                   </p>
                 </div>
                 <button className="btn btn-ghost" onClick={() => navigate("planning")}>

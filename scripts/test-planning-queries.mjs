@@ -3,6 +3,10 @@
  * Exécution : node scripts/test-planning-queries.mjs
  */
 import {
+  aggregateRevenuByIntervenant,
+  aggregateRevenuBySource,
+  countEvenementsByIntervenant,
+  countSessionsBySource,
   enrichAllSessions,
   formatDashboardSessionSummary,
   formatSessionHeure,
@@ -10,6 +14,8 @@ import {
   getActivityFilterOptions,
   getFinancialSessions,
   getFreeSlotDaysThisWeek,
+  getSessionBadge,
+  getSessionSource,
   getSessionsToday,
   getSessionsToPromote,
   getSessionActivityName,
@@ -17,8 +23,11 @@ import {
   isActivitySession,
   isCatalogueSession,
   isEvenementSession,
-  isFinancialSession
+  isFinancialSession,
+  SESSION_SOURCE,
+  computeRevenuSuzanne
 } from "../src/utils/planningQueries.js";
+import { computeMetrics } from "../src/utils/metrics.js";
 import { isoDate, mondayOf } from "../src/utils/dateHelpers.js";
 
 let passed = 0;
@@ -107,6 +116,25 @@ const ateliers = [
     placesMax: 10,
     statut: "Prévu",
     communique: false
+  },
+  {
+    id: "s7",
+    kind: "evenement",
+    nom: "Carnet des émotions",
+    intervenant: "Marie Dupont",
+    typeActivite: "Atelier intervenant",
+    modeRemuneration: "forfait",
+    montantSuzanne: 45,
+    prixPublicParticipant: 35,
+    participants: 8,
+    placesMax: 12,
+    prepMin: 30,
+    animMin: 60,
+    coutMatiere: 10,
+    date: "2026-07-26",
+    heure: "14:00",
+    statut: "Prévu",
+    communique: true
   }
 ];
 
@@ -160,7 +188,37 @@ const activityOpts = getActivityFilterOptions(enriched);
 assert(activityOpts.includes("Tufting Découverte"), "Option filtre activité");
 assert(activityOpts.includes("Pop-up créatif"), "Option filtre événement");
 assert(getTypeFilterOptions(enriched).includes("Pause créative"), "Option filtre type événement");
-assert(getFinancialSessions(enriched).length === 5, "5 sessions financières sur 6");
+assert(getFinancialSessions(enriched).length === 6, "6 sessions financières sur 7");
+
+console.log("\n=== Scénario 7 — E-D : sources, badges et agrégations ===");
+assert(getSessionSource(enriched.find((s) => s.id === "s1")) === SESSION_SOURCE.CATALOGUE, "Source catalogue");
+assert(getSessionSource(enriched.find((s) => s.id === "s6")) === SESSION_SOURCE.EVENEMENT, "Source evenement");
+assert(getSessionSource(enriched.find((s) => s.id === "s3")) === SESSION_SOURCE.BLOQUE, "Source bloque");
+assert(getSessionBadge(enriched.find((s) => s.id === "s6"))?.label === "Ponctuel", "Badge Ponctuel");
+assert(getSessionBadge(enriched.find((s) => s.id === "s3"))?.label === "Bloqué", "Badge Bloqué");
+assert(getSessionBadge(enriched.find((s) => s.id === "s1")) === null, "Pas de badge catalogue");
+
+const counts = countSessionsBySource(enriched);
+assert(counts.catalogue === 4, "4 sessions catalogue");
+assert(counts.evenement === 2, "2 événements ponctuels");
+assert(counts.bloque === 1, "1 créneau bloqué");
+
+const forfait = enriched.find((s) => s.id === "s7");
+assert(computeRevenuSuzanne(forfait) === 45, "Forfait : revenu = 45 €");
+assert(computeRevenuSuzanne(forfait) !== 35 * 8, "Prix public intervenante exclu");
+const forfaitMetrics = computeMetrics(forfait);
+assert(forfaitMetrics.revenue === 45, "Rentabilité CA forfait = 45 €");
+assert(forfaitMetrics.marge === 35, "Rentabilité marge forfait déduite");
+
+const revenuTotals = aggregateRevenuBySource(enriched);
+assert(revenuTotals.evenement >= 45, "Agrégat CA événements inclut forfait");
+assert(revenuTotals.catalogue >= 0, "Agrégat CA catalogue séparé");
+assert(revenuTotals.total === revenuTotals.catalogue + revenuTotals.evenement, "Total = catalogue + evenement");
+
+const byIntervenant = aggregateRevenuByIntervenant(enriched);
+assert(byIntervenant["Marie Dupont"] === 45, "Revenu par intervenant");
+const evtCounts = countEvenementsByIntervenant(enriched);
+assert(evtCounts["Marie Dupont"] === 1, "Compteur événements par intervenant");
 
 console.log(`\n=== Résultat : ${passed} ok, ${failed} échec(s) ===`);
 process.exit(failed > 0 ? 1 : 0);

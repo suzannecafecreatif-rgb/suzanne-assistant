@@ -9,7 +9,8 @@ import {
   getTypeFilterOptions,
   isFinancialSession
 } from "../utils/planningQueries.js";
-import { isBlockedSlot } from "../utils/planningHelpers.js";
+import { isBlockedSlot, isEvenementSession } from "../utils/planningHelpers.js";
+import SessionBadge from "../components/SessionBadge.jsx";
 
 export default function Historique({ ateliers, catalogue = [], onDelete, onDuplicate, navigate }) {
   const [sortKey, setSortKey] = useState("date");
@@ -111,8 +112,13 @@ export default function Historique({ ateliers, catalogue = [], onDelete, onDupli
                     <td>{formatDateShort(a.date)}</td>
                     <td>
                       <span className="historique-activity-cell">
-                        <span>{a.activityName}</span>
-                        {blocked && <span className="session-badge session-badge-bloque">Bloqué</span>}
+                        <span className="historique-activity-text">
+                          <span>{a.activityName}</span>
+                          {isEvenementSession(a) && a.intervenant?.trim() && (
+                            <span className="historique-intervenant">{a.intervenant.trim()}</span>
+                          )}
+                        </span>
+                        <SessionBadge session={a} />
                       </span>
                     </td>
                     <td>{blocked ? "—" : a.participants || 0}</td>

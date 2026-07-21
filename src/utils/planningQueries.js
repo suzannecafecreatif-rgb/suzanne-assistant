@@ -2,6 +2,7 @@
 
 import { addDays, isoDate, mondayOf } from "./dateHelpers.js";
 import {
+  computeRevenuSuzanne,
   enrichSession,
   getSessionDisplayName,
   isActivitySession,
@@ -12,6 +13,98 @@ import {
   isPromotableSession,
   normalizeSessionStatut
 } from "./planningHelpers.js";
+
+/** Source métier d'une session — base pour statistiques futures. */
+export const SESSION_SOURCE = {
+  CATALOGUE: "catalogue",
+  EVENEMENT: "evenement",
+  BLOQUE: "bloque"
+};
+
+/** Retourne la source métier (catalogue / evenement / bloque). */
+export function getSessionSource(session) {
+  if (isBlockedSlot(session)) return SESSION_SOURCE.BLOQUE;
+  if (isEvenementSession(session)) return SESSION_SOURCE.EVENEMENT;
+  return SESSION_SOURCE.CATALOGUE;
+}
+
+export function getCatalogueSessions(sessions) {
+  return (sessions || []).filter((s) => getSessionSource(s) === SESSION_SOURCE.CATALOGUE);
+}
+
+export function getEvenementSessions(sessions) {
+  return (sessions || []).filter((s) => getSessionSource(s) === SESSION_SOURCE.EVENEMENT);
+}
+
+export function getBlockedSessions(sessions) {
+  return (sessions || []).filter((s) => getSessionSource(s) === SESSION_SOURCE.BLOQUE);
+}
+
+/** Badge UI selon le type de session (Dashboard, Historique, Rentabilité). */
+export function getSessionBadge(session) {
+  if (isBlockedSlot(session)) return { label: "Bloqué", variant: "bloque" };
+  if (isEvenementSession(session)) return { label: "Ponctuel", variant: "ponctuel" };
+  return null;
+}
+
+/**
+ * Agrège le revenu Suzanne par source (ateliers catalogue vs événements ponctuels).
+ * Les créneaux bloqués sont exclus.
+ */
+export function aggregateRevenuBySource(sessions) {
+  const totals = { catalogue: 0, evenement: 0, total: 0 };
+
+  (sessions || []).forEach((session) => {
+    if (!isFinancialSession(session)) return;
+    const revenu = computeRevenuSuzanne(session);
+    if (isCatalogueSession(session)) totals.catalogue += revenu;
+    else if (isEvenementSession(session)) totals.evenement += revenu;
+    totals.total += revenu;
+  });
+
+  return totals;
+}
+
+/** Compte les sessions par source métier. */
+export function countSessionsBySource(sessions) {
+  return {
+    catalogue: getCatalogueSessions(sessions).length,
+    evenement: getEvenementSessions(sessions).length,
+    bloque: getBlockedSessions(sessions).length
+  };
+}
+
+/**
+ * Revenu Suzanne par intervenant (événements ponctuels uniquement).
+ * Clé « Sans intervenant » si le champ est vide.
+ */
+export function aggregateRevenuByIntervenant(sessions) {
+  const totals = new Map();
+
+  getEvenementSessions(sessions).forEach((session) => {
+    if (!isFinancialSession(session)) return;
+    const key = session.intervenant?.trim() || "Sans intervenant";
+    totals.set(key, (totals.get(key) || 0) + computeRevenuSuzanne(session));
+  });
+
+  return Object.fromEntries(
+    [...totals.entries()].sort((a, b) => b[1] - a[1])
+  );
+}
+
+/** Nombre d'événements ponctuels accueillis par intervenant. */
+export function countEvenementsByIntervenant(sessions) {
+  const counts = new Map();
+
+  getEvenementSessions(sessions).forEach((session) => {
+    const key = session.intervenant?.trim() || "Sans intervenant";
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+
+  return Object.fromEntries(
+    [...counts.entries()].sort((a, b) => b[1] - a[1])
+  );
+}
 
 function sortByHeure(sessions) {
   return [...sessions].sort((a, b) => {
@@ -38,7 +131,7 @@ export function formatSessionHeure(session) {
   return start;
 }
 
-/** Places prévues / capacité (sessions catalogue uniquement). */
+/** Places prévues / capacité (activités planifiables). */
 export function formatSessionPlaces(session) {
   if (isBlockedSlot(session)) return null;
 
@@ -80,9 +173,9 @@ export function getSessionsToPromote(sessions, { fromDate, toDate } = {}) {
 }
 
 /**
- * Jours encore libres cette semaine pour une activité catalogue :
+ * Jours encore libres cette semaine :
  * - à partir d'aujourd'hui, jusqu'à dimanche ;
- * - un jour est libre s'il n'a aucune session catalogue ni événement ponctuel.
+ * - un jour est libre s'il n'a aucune activité catalogue ni événement ponctuel.
  */
 export function getFreeSlotDaysThisWeek(sessions, refDate = new Date()) {
   const now = new Date(refDate);
@@ -119,7 +212,14 @@ export function getSessionActivityName(session) {
   return getSessionDisplayName(session);
 }
 
-export { isFinancialSession, isActivitySession, isEvenementSession, isCatalogueSession, isBlockedSlot };
+export {
+  isFinancialSession,
+  isActivitySession,
+  isEvenementSession,
+  isCatalogueSession,
+  isBlockedSlot,
+  computeRevenuSuzanne
+} from "./planningHelpers.js";
 
 /** Options de filtre par activité (noms uniques, triés). */
 export function getActivityFilterOptions(sessions) {
