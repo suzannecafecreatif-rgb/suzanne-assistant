@@ -129,7 +129,13 @@ export default function App() {
         {loading ? (
           <p className="page-sub">Chargement...</p>
         ) : screen === "dashboard" ? (
-          <Dashboard ateliers={ateliers} stock={stock} onUpdate={handleUpdateAtelier} navigate={navigate} />
+          <Dashboard
+            ateliers={ateliers}
+            catalogue={catalogue}
+            stock={stock}
+            onUpdate={handleUpdateAtelier}
+            navigate={navigate}
+          />
         ) : screen === "catalogue" ? (
           <Catalogue
             catalogue={catalogue}

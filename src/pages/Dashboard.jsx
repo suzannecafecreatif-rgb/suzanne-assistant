@@ -1,28 +1,46 @@
 import { Plus, ArrowRight, Sparkles, AlertTriangle, Check } from "lucide-react";
-import { buildDirectorBrief, materialFeasibility, computeTrends, freeSlotsThisWeek } from "../utils/decisionEngine.js";
-import { formatDateShort, formatDayLabel, capitalize } from "../utils/dateHelpers.js";
+import { buildDirectorBrief, computeTrends } from "../utils/decisionEngine.js";
+import {
+  enrichAllSessions,
+  formatDashboardSessionSummary,
+  formatSessionHeure,
+  formatSessionPlaces,
+  getFreeSlotDaysThisWeek,
+  getSessionsToday,
+  getSessionsToPromote
+} from "../utils/planningQueries.js";
+import { getSessionDisplayName, isBlockedSlot, normalizeSessionStatut } from "../utils/planningHelpers.js";
+import { formatDateShort, formatDayLabel, capitalize, isoDate } from "../utils/dateHelpers.js";
 
-export default function Dashboard({ ateliers, stock, onUpdate, navigate }) {
+export default function Dashboard({ ateliers, catalogue = [], stock, onUpdate, navigate }) {
   const brief = buildDirectorBrief(ateliers, stock);
+  const enriched = enrichAllSessions(ateliers, catalogue);
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = isoDate(now);
   const weekAheadLimit = new Date(now);
   weekAheadLimit.setDate(now.getDate() + 7);
+  const weekAheadIso = isoDate(weekAheadLimit);
 
-  const todayAteliers = ateliers.filter((a) => a.date === todayStr);
+  const todaySessions = getSessionsToday(enriched, todayStr);
   const lowStock = stock.filter((s) => Number(s.quantite) <= Number(s.seuilAlerte || 0));
-  const freeSlots = freeSlotsThisWeek(ateliers);
-  const toPromote = ateliers
-    .filter((a) => { const d = new Date(a.date); return d >= now && d <= weekAheadLimit && !a.communique; })
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  const freeSlotDays = getFreeSlotDaysThisWeek(enriched, now);
+  const toPromote = getSessionsToPromote(enriched, { fromDate: todayStr, toDate: weekAheadIso });
   const { best, declining } = computeTrends(ateliers);
+
+  const openSession = (session) => {
+    navigate("planning", { focusSession: session.id });
+  };
 
   const statusIcon = (status) =>
     status === "ok" ? <Check size={13} aria-hidden="true" /> : status === "warn" ? <AlertTriangle size={13} aria-hidden="true" /> : null;
 
-  const nothingUrgent = todayAteliers.length === 0 && lowStock.length === 0 && toPromote.length === 0 && declining.length === 0;
+  const nothingUrgent =
+    todaySessions.length === 0 &&
+    lowStock.length === 0 &&
+    toPromote.length === 0 &&
+    declining.length === 0;
 
   return (
     <div>
@@ -46,16 +64,33 @@ export default function Dashboard({ ateliers, stock, onUpdate, navigate }) {
             </div>
           )}
 
-          {todayAteliers.length > 0 && (
+          {todaySessions.length > 0 && (
             <div className="today-card">
               <p className="today-title">À préparer aujourd'hui</p>
-              {todayAteliers.map((a) => {
-                const check = materialFeasibility(a.theme, ateliers, stock);
+              {todaySessions.map((session) => {
+                const places = formatSessionPlaces(session);
+                const statut = normalizeSessionStatut(session.statut);
+                const blocked = isBlockedSlot(session);
+
                 return (
-                  <div key={a.id} className="today-row">
-                    <span className="today-theme">{a.theme}</span>
-                    <span className="today-detail">{a.participants || 0} participants{check.status === "warn" ? ` · ${check.text}` : ""}</span>
-                  </div>
+                  <button
+                    key={session.id}
+                    type="button"
+                    className="dashboard-session-row today-row"
+                    onClick={() => openSession(session)}
+                  >
+                    <span className="dashboard-session-main">
+                      <span className="today-theme">{getSessionDisplayName(session)}</span>
+                      <span className="today-detail">
+                        {[
+                          formatSessionHeure(session),
+                          places,
+                          blocked ? "Créneau bloqué" : statut !== "Prévu" ? statut : null
+                        ].filter(Boolean).join(" · ")}
+                      </span>
+                    </span>
+                    <ArrowRight size={14} aria-hidden="true" className="dashboard-session-arrow" />
+                  </button>
                 );
               })}
             </div>
@@ -74,10 +109,19 @@ export default function Dashboard({ ateliers, stock, onUpdate, navigate }) {
           {toPromote.length > 0 && (
             <div className="promote-card">
               <p className="promote-title">Publications à préparer</p>
-              {toPromote.map((a) => (
-                <div key={a.id} className="promote-row">
-                  <span>{a.theme} · {formatDateShort(a.date)}</span>
-                  <button className="btn btn-ghost btn-small" onClick={() => onUpdate({ ...a, communique: true })}>
+              {toPromote.map((session) => (
+                <div key={session.id} className="promote-row">
+                  <button
+                    type="button"
+                    className="dashboard-session-link"
+                    onClick={() => openSession(session)}
+                  >
+                    {formatDashboardSessionSummary(session)} · {formatDateShort(session.date)}
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-small"
+                    onClick={() => onUpdate({ ...session, communique: true })}
+                  >
                     Marquer comme fait
                   </button>
                 </div>
@@ -106,14 +150,21 @@ export default function Dashboard({ ateliers, stock, onUpdate, navigate }) {
             </div>
           )}
 
-          {freeSlots.length > 0 && (
+          {freeSlotDays.length > 0 && (
             <div className="mini-list" style={{ marginBottom: "1rem" }}>
               <div className="mini-list-item">
                 <div>
-                  <p className="mini-list-theme">{freeSlots.length} créneau{freeSlots.length > 1 ? "x" : ""} encore libre{freeSlots.length > 1 ? "s" : ""} cette semaine</p>
-                  <p className="mini-list-reason">{freeSlots.map((d) => formatDayLabel(d)).join(" · ")}</p>
+                  <p className="mini-list-theme">
+                    {freeSlotDays.length} créneau{freeSlotDays.length > 1 ? "x" : ""} encore libre{freeSlotDays.length > 1 ? "s" : ""} cette semaine
+                  </p>
+                  <p className="mini-list-reason">
+                    {freeSlotDays.map((d) => formatDayLabel(d)).join(" · ")}
+                    {" · "}sans activité catalogue planifiée
+                  </p>
                 </div>
-                <button className="btn btn-ghost" onClick={() => navigate("planning")}>Voir <ArrowRight size={14} aria-hidden="true" /></button>
+                <button className="btn btn-ghost" onClick={() => navigate("planning")}>
+                  Voir <ArrowRight size={14} aria-hidden="true" />
+                </button>
               </div>
             </div>
           )}

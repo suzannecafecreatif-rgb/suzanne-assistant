@@ -104,6 +104,18 @@ body {
 }
 .today-title { font-family: "Fraunces", serif; font-weight: 600; font-size: 14px; margin: 0 0 6px; color: var(--terracotta-dark); }
 .today-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+.dashboard-session-row {
+  width: 100%; border: none; background: transparent; cursor: pointer; text-align: left;
+  align-items: center; gap: 8px; padding: 6px 0; border-radius: 6px;
+}
+.dashboard-session-row:hover { background: rgba(255, 255, 255, 0.45); }
+.dashboard-session-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.dashboard-session-arrow { color: var(--ink-soft); flex-shrink: 0; }
+.dashboard-session-link {
+  flex: 1; min-width: 0; border: none; background: transparent; cursor: pointer;
+  text-align: left; font-size: 13px; color: var(--ink); padding: 0;
+}
+.dashboard-session-link:hover { color: var(--terracotta-dark); text-decoration: underline; }
 .today-theme { font-weight: 500; }
 .today-detail { color: var(--ink-soft); }
 
