@@ -637,6 +637,20 @@ body {
 .planning-catalogue-option-category { font-size: 11px; color: var(--ink-soft); }
 .planning-catalogue-option-meta { font-size: 11.5px; color: var(--terracotta-dark); font-weight: 500; }
 .planning-modal-fields { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; border-top: 0.5px solid var(--line); }
+.planning-modal-fields--flush { border-top: none; padding-top: 0; }
+.planning-mode-fieldset { border: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.planning-mode-fieldset .label { margin-bottom: 0; }
+.planning-mode-options { display: flex; flex-direction: column; gap: 6px; }
+.planning-mode-option {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 11px; border: 0.5px solid var(--line); border-radius: 8px;
+  cursor: pointer; font-size: 13px; color: var(--ink);
+  transition: border-color 0.15s, background 0.15s;
+}
+.planning-mode-option input { accent-color: var(--terracotta); }
+.planning-mode-option.is-selected {
+  border-color: var(--terracotta); background: var(--cream);
+}
 .planning-modal-selected { font-size: 12.5px; color: var(--ink-soft); margin: 0; }
 .planning-modal-textarea { resize: vertical; min-height: 72px; }
 .planning-modal-error { font-size: 12.5px; color: var(--terracotta-dark); margin: 0; }

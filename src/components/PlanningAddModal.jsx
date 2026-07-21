@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
+import { ACTIVITY_TYPES } from "../data/catalogueMeta.js";
 import {
   ACTIVITY_TYPE_COLORS,
+  buildEvenementFromForm,
   createBlockedSlot,
   createSessionFromCatalogue,
   formatCatalogueMeta,
+  getUiRemunerationModeOptions,
   groupCatalogueByType,
-  SESSION_KIND
+  REMUNERATION_MODE,
+  SESSION_KIND,
+  validateEvenementForm
 } from "../utils/planningHelpers.js";
 
 function formatDateLabel(dateIso) {
@@ -17,8 +22,15 @@ function formatDateLabel(dateIso) {
   });
 }
 
+const MODAL_TITLES = {
+  [SESSION_KIND.CATALOGUE]: "Activité du catalogue",
+  [SESSION_KIND.EVENEMENT]: "Événement ponctuel",
+  [SESSION_KIND.BLOQUE]: "Créneau bloqué"
+};
+
 export default function PlanningAddModal({ date, kind, catalogue, onClose, onSave, navigate }) {
   const isCatalogue = kind === SESSION_KIND.CATALOGUE;
+  const isEvenement = kind === SESSION_KIND.EVENEMENT;
 
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState("");
@@ -30,6 +42,17 @@ export default function PlanningAddModal({ date, kind, catalogue, onClose, onSav
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const [nom, setNom] = useState("");
+  const [intervenant, setIntervenant] = useState("");
+  const [typeActivite, setTypeActivite] = useState(ACTIVITY_TYPES[0] || "");
+  const [modeRemuneration, setModeRemuneration] = useState(REMUNERATION_MODE.ENCAISSEMENT);
+  const [prixParticipant, setPrixParticipant] = useState("");
+  const [montantSuzanne, setMontantSuzanne] = useState("");
+  const [prixPublicParticipant, setPrixPublicParticipant] = useState("");
+  const [placesMax, setPlacesMax] = useState("");
+  const [inscrits, setInscrits] = useState("");
+
+  const remunerationOptions = useMemo(() => getUiRemunerationModeOptions(), []);
   const groups = useMemo(() => groupCatalogueByType(catalogue, search), [catalogue, search]);
   const selectedItem = useMemo(
     () => catalogue.find((item) => item.id === selectedId),
@@ -65,6 +88,39 @@ export default function PlanningAddModal({ date, kind, catalogue, onClose, onSav
       return;
     }
 
+    if (isEvenement) {
+      const validationErrors = validateEvenementForm({
+        nom,
+        heure,
+        typeActivite,
+        modeRemuneration,
+        prixParticipant,
+        montantSuzanne
+      });
+      if (validationErrors.length > 0) {
+        setError(validationErrors[0]);
+        return;
+      }
+      setSaving(true);
+      const record = buildEvenementFromForm({
+        date,
+        nom: nom.trim(),
+        intervenant: intervenant.trim(),
+        typeActivite,
+        heure: heure.trim(),
+        modeRemuneration,
+        prixParticipant,
+        montantSuzanne,
+        prixPublicParticipant,
+        placesMax,
+        inscrits,
+        notes: notes.trim()
+      });
+      await onSave(record);
+      setSaving(false);
+      return;
+    }
+
     if (!heure.trim() || !heureFin.trim()) {
       setError("Les heures de début et de fin sont obligatoires.");
       return;
@@ -82,6 +138,9 @@ export default function PlanningAddModal({ date, kind, catalogue, onClose, onSav
     setSaving(false);
   };
 
+  const showEncaissementFields = isEvenement && modeRemuneration === REMUNERATION_MODE.ENCAISSEMENT;
+  const showForfaitFields = isEvenement && modeRemuneration === REMUNERATION_MODE.FORFAIT;
+
   return (
     <div className="planning-modal-backdrop" onClick={onClose} role="presentation">
       <div
@@ -95,7 +154,7 @@ export default function PlanningAddModal({ date, kind, catalogue, onClose, onSav
           <div>
             <p className="planning-modal-eyebrow">{formatDateLabel(date)}</p>
             <h2 id="planning-modal-title" className="planning-modal-title">
-              {isCatalogue ? "Activité du catalogue" : "Créneau bloqué"}
+              {MODAL_TITLES[kind] || "Ajouter au planning"}
             </h2>
           </div>
           <button type="button" className="btn-icon" aria-label="Fermer" onClick={onClose}>
@@ -196,6 +255,167 @@ export default function PlanningAddModal({ date, kind, catalogue, onClose, onSav
                 </>
               )}
             </>
+          ) : isEvenement ? (
+            <div className="planning-modal-fields planning-modal-fields--flush">
+              <label className="field">
+                <span className="label">Nom de l'événement</span>
+                <input
+                  className="input"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder="Ex. Carnet des émotions"
+                  required
+                />
+              </label>
+
+              <label className="field">
+                <span className="label">Intervenant (facultatif)</span>
+                <input
+                  className="input"
+                  value={intervenant}
+                  onChange={(e) => setIntervenant(e.target.value)}
+                  placeholder="Nom de l'intervenant·e"
+                />
+              </label>
+
+              <label className="field">
+                <span className="label">Type d'activité</span>
+                <select className="input" value={typeActivite} onChange={(e) => setTypeActivite(e.target.value)}>
+                  {ACTIVITY_TYPES.map((type) => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </label>
+
+              <fieldset className="planning-mode-fieldset">
+                <legend className="label">Mode de rémunération</legend>
+                <div className="planning-mode-options">
+                  {remunerationOptions.map((option) => (
+                    <label
+                      key={option.value}
+                      className={`planning-mode-option${modeRemuneration === option.value ? " is-selected" : ""}`}
+                    >
+                      <input
+                        type="radio"
+                        name="modeRemuneration"
+                        value={option.value}
+                        checked={modeRemuneration === option.value}
+                        onChange={() => setModeRemuneration(option.value)}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              {showEncaissementFields && (
+                <div className="field-row">
+                  <label className="field">
+                    <span className="label">Prix par participant</span>
+                    <input
+                      className="input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={prixParticipant}
+                      onChange={(e) => setPrixParticipant(e.target.value)}
+                      placeholder="Ex. 35"
+                    />
+                  </label>
+                  <label className="field">
+                    <span className="label">Capacité maximale</span>
+                    <input
+                      className="input"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={placesMax}
+                      onChange={(e) => setPlacesMax(e.target.value)}
+                      placeholder="Ex. 12"
+                    />
+                  </label>
+                </div>
+              )}
+
+              {showForfaitFields && (
+                <>
+                  <label className="field">
+                    <span className="label">Montant revenant à Suzanne</span>
+                    <input
+                      className="input"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={montantSuzanne}
+                      onChange={(e) => setMontantSuzanne(e.target.value)}
+                      placeholder="Ex. 45"
+                    />
+                  </label>
+                  <div className="field-row">
+                    <label className="field">
+                      <span className="label">Capacité maximale</span>
+                      <input
+                        className="input"
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={placesMax}
+                        onChange={(e) => setPlacesMax(e.target.value)}
+                        placeholder="Ex. 12"
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="label">Tarif participant (intervenante)</span>
+                      <input
+                        className="input"
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={prixPublicParticipant}
+                        onChange={(e) => setPrixPublicParticipant(e.target.value)}
+                        placeholder="Facultatif"
+                      />
+                    </label>
+                  </div>
+                </>
+              )}
+
+              <div className="field-row">
+                <label className="field">
+                  <span className="label">Heure</span>
+                  <input
+                    className="input"
+                    type="time"
+                    value={heure}
+                    onChange={(e) => setHeure(e.target.value)}
+                    required
+                  />
+                </label>
+                <label className="field">
+                  <span className="label">Nombre d'inscrits</span>
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={inscrits}
+                    onChange={(e) => setInscrits(e.target.value)}
+                    placeholder="0"
+                  />
+                </label>
+              </div>
+
+              <label className="field">
+                <span className="label">Note (facultative)</span>
+                <textarea
+                  className="input planning-modal-textarea"
+                  rows={3}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Notes internes…"
+                />
+              </label>
+            </div>
           ) : (
             <div className="planning-modal-fields">
               <div className="field-row">

@@ -116,6 +116,9 @@ export const ACTIVITY_TYPE_COLORS = {
 
 export const BLOCKED_SLOT_COLOR = "#8a8178";
 
+/** Couleur calendrier — événements ponctuels (indépendante du type d'activité). */
+export const EVENEMENT_COLOR = "#c45c8a";
+
 /** Modes de rémunération pour les événements ponctuels (E-A révisé). */
 export const REMUNERATION_MODE = {
   ENCAISSEMENT: "encaissement",
@@ -133,6 +136,19 @@ export const REMUNERATION_MODE_LABELS = {
 };
 
 export const DEFAULT_REMUNERATION_MODE = REMUNERATION_MODE.ENCAISSEMENT;
+
+/** Modes exposés dans l'interface (E-B) — pourcentage et montant/participant réservés au futur. */
+export const UI_REMUNERATION_MODES = [
+  REMUNERATION_MODE.ENCAISSEMENT,
+  REMUNERATION_MODE.FORFAIT
+];
+
+export function getUiRemunerationModeOptions() {
+  return UI_REMUNERATION_MODES.map((value) => ({
+    value,
+    label: REMUNERATION_MODE_LABELS[value]
+  }));
+}
 
 function toNumber(v) {
   const n = Number(v);
@@ -225,9 +241,10 @@ export function getSessionDisplayName(session) {
   return session.nom?.trim() || session.theme?.trim() || "Sans nom";
 }
 
-/** Couleur de puce selon le type (snapshot) ou gris pour créneau bloqué. */
+/** Couleur de puce — gris (bloqué), rose (événement ponctuel), sinon type d'activité. */
 export function getSessionTypeColor(session) {
   if (isBlockedSlot(session)) return BLOCKED_SLOT_COLOR;
+  if (isEvenementSession(session)) return EVENEMENT_COLOR;
   return ACTIVITY_TYPE_COLORS[session.typeActivite] || BLOCKED_SLOT_COLOR;
 }
 
@@ -500,6 +517,45 @@ export function patchEvenementSession(session, patch = {}) {
     notes: patch.notes ?? session.notes,
     communique: patch.communique != null ? !!patch.communique : session.communique
   };
+}
+
+/** Valide les champs du formulaire « Événement ponctuel » (E-B). */
+export function validateEvenementForm(fields) {
+  const errors = [];
+  if (!fields.nom?.trim()) errors.push("Le nom est obligatoire.");
+  if (!fields.heure?.trim()) errors.push("L'heure est obligatoire.");
+  if (!fields.typeActivite?.trim()) errors.push("Le type d'activité est obligatoire.");
+
+  const mode = normalizeRemunerationMode(fields.modeRemuneration);
+  if (mode === REMUNERATION_MODE.ENCAISSEMENT) {
+    if (toNumber(fields.prixParticipant) <= 0) {
+      errors.push("Le prix par participant est obligatoire.");
+    }
+  } else if (mode === REMUNERATION_MODE.FORFAIT) {
+    if (toNumber(fields.montantSuzanne) <= 0) {
+      errors.push("Le montant revenant à Suzanne est obligatoire.");
+    }
+  }
+
+  return errors;
+}
+
+/** Construit une session événement depuis les champs du formulaire (E-B). */
+export function buildEvenementFromForm(fields) {
+  return createEvenementSession({
+    nom: fields.nom,
+    intervenant: fields.intervenant,
+    typeActivite: fields.typeActivite,
+    date: fields.date,
+    heure: fields.heure,
+    modeRemuneration: fields.modeRemuneration,
+    prixParticipant: fields.prixParticipant,
+    montantSuzanne: fields.montantSuzanne,
+    prixPublicParticipant: fields.prixPublicParticipant,
+    placesMax: fields.placesMax,
+    inscrits: fields.inscrits,
+    notes: fields.notes
+  });
 }
 
 /** Duplique une session (snapshots conservés) avec nouvelle date/heure. */

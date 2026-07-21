@@ -5,15 +5,18 @@
 import {
   ACTIVITY_TYPE_COLORS,
   BLOCKED_SLOT_COLOR,
+  buildEvenementFromForm,
   computeRevenuSuzanne,
   createBlockedSlot,
   createEvenementSession,
   createSessionFromCatalogue,
   duplicateSession,
   enrichSession,
+  EVENEMENT_COLOR,
   getSessionDisplayName,
   getSessionFillRate,
   getSessionTypeColor,
+  getUiRemunerationModeOptions,
   isActivitySession,
   isBlockedSlot,
   isCatalogueSession,
@@ -27,7 +30,9 @@ import {
   patchEvenementSession,
   REMUNERATION_MODE,
   SESSION_KIND,
-  SESSION_STATUTS
+  SESSION_STATUTS,
+  UI_REMUNERATION_MODES,
+  validateEvenementForm
 } from "../src/utils/planningHelpers.js";
 import { computeMetrics } from "../src/utils/metrics.js";
 
@@ -94,6 +99,17 @@ assert(getSessionDisplayName(bloque) === "Privatisation possible", "Nom affiché
 console.log("\n=== Scénario 3 — Couleurs par type ===");
 assert(getSessionTypeColor(session) === ACTIVITY_TYPE_COLORS["Atelier guidé"], "Orange atelier guidé");
 assert(getSessionTypeColor(bloque) === BLOCKED_SLOT_COLOR, "Gris créneau bloqué");
+const evenementColorProbe = createEvenementSession({
+  nom: "Probe",
+  typeActivite: "Atelier intervenant",
+  date: "2026-11-01",
+  heure: "10:00"
+});
+assert(getSessionTypeColor(evenementColorProbe) === EVENEMENT_COLOR, "Rose événement ponctuel");
+assert(
+  getSessionTypeColor(evenementColorProbe) !== ACTIVITY_TYPE_COLORS["Atelier intervenant"],
+  "Couleur événement ≠ type activité"
+);
 
 console.log("\n=== Scénario 4 — Remplissage ===");
 assert(getSessionFillRate(session) === 1, "Complet si 8/8");
@@ -163,7 +179,6 @@ assert(evenement.intervenant === "Marie Dupont", "Intervenant");
 assert(evenement.modeRemuneration === REMUNERATION_MODE.ENCAISSEMENT, "Mode par défaut encaissement");
 assert(evenement.participants === 12, "Nombre d'inscrits");
 assert(evenement.typeActivite === "Atelier intervenant", "Type activité");
-assert(getSessionTypeColor(evenement) === ACTIVITY_TYPE_COLORS["Atelier intervenant"], "Couleur type");
 const evtSansIntervenant = createEvenementSession({ nom: "Pop-up", date: "2026-11-06", heure: "10:00" });
 assert(evtSansIntervenant.intervenant === "", "Intervenant facultatif");
 const patchedEvt = patchEvenementSession(evenement, { nom: "Conférence mise à jour", inscrits: 15, statut: "Complet" });
@@ -230,6 +245,48 @@ assert(computeRevenuSuzanne(montantParPers) === 40, "Montant fixe / participant 
 assert(computeRevenuSuzanne(session) === 45 * 8, "Catalogue inchangé : prix × inscrits");
 assert(computeRevenuSuzanne(bloque) === 0, "Créneau bloqué : revenu 0");
 assert(normalizeRemunerationMode(undefined, SESSION_KIND.CATALOGUE) === null, "Catalogue sans mode");
+
+console.log("\n=== Scénario 11 — Formulaire événement ponctuel (E-B) ===");
+assert(UI_REMUNERATION_MODES.length === 2, "2 modes UI");
+assert(getUiRemunerationModeOptions().every((o) => o.label && o.value), "Options UI libellées");
+assert(validateEvenementForm({ nom: "", heure: "10:00", typeActivite: "Atelier guidé" }).length > 0, "Nom obligatoire");
+assert(
+  validateEvenementForm({
+    nom: "Test",
+    heure: "10:00",
+    typeActivite: "Atelier guidé",
+    modeRemuneration: REMUNERATION_MODE.FORFAIT,
+    montantSuzanne: ""
+  }).length > 0,
+  "Montant Suzanne obligatoire en forfait"
+);
+const formEncaissement = buildEvenementFromForm({
+  date: "2026-11-20",
+  nom: "Atelier pop-up",
+  heure: "15:00",
+  typeActivite: "Pause créative",
+  modeRemuneration: REMUNERATION_MODE.ENCAISSEMENT,
+  prixParticipant: 30,
+  placesMax: 10,
+  inscrits: 4
+});
+assert(formEncaissement.kind === SESSION_KIND.EVENEMENT, "Form encaissement → evenement");
+assert(computeRevenuSuzanne(formEncaissement) === 120, "Form encaissement CA");
+const formForfait = buildEvenementFromForm({
+  date: "2026-11-21",
+  nom: "Carnet des émotions",
+  intervenant: "Intervenante extérieure",
+  heure: "14:00",
+  typeActivite: "Atelier intervenant",
+  modeRemuneration: REMUNERATION_MODE.FORFAIT,
+  montantSuzanne: 45,
+  prixPublicParticipant: 35,
+  placesMax: 12,
+  inscrits: 8
+});
+assert(formForfait.modeRemuneration === REMUNERATION_MODE.FORFAIT, "Form forfait mode");
+assert(computeRevenuSuzanne(formForfait) === 45, "Form forfait revenu 45 €");
+assert(formForfait.prixPublicParticipant === 35, "Tarif intervenante conservé");
 
 console.log(`\n=== Résultat : ${passed} ok, ${failed} échec(s) ===`);
 process.exit(failed > 0 ? 1 : 0);

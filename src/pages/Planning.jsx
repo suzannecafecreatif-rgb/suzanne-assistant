@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Ban, BookOpen, Plus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Ban, BookOpen, CalendarDays, Plus, X } from "lucide-react";
 import { mondayOf, addDays, isoDate, formatMonthLabel } from "../utils/dateHelpers.js";
 import PlanningSessionChip, { enrichSessions, sortSessionsByHeure } from "../components/PlanningSessionChip.jsx";
 import PlanningAddModal from "../components/PlanningAddModal.jsx";
@@ -21,6 +21,14 @@ function PlanningDayAddMenu({ dateIso, onSelect, onClose }) {
       >
         <BookOpen size={15} aria-hidden="true" />
         Activité du catalogue
+      </button>
+      <button
+        type="button"
+        className="planning-add-menu-item"
+        onClick={() => onSelect(SESSION_KIND.EVENEMENT)}
+      >
+        <CalendarDays size={15} aria-hidden="true" />
+        Événement ponctuel
       </button>
       <button
         type="button"
@@ -121,7 +129,7 @@ export default function Planning({
     if (!onSaveSession) return;
     await onSaveSession(record);
     setAddModal(null);
-    showNotice("Activité ajoutée au planning.");
+    showNotice("Session ajoutée au planning.");
   };
 
   const handleUpdate = async (record) => {
