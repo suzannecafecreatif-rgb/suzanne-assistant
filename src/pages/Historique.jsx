@@ -72,7 +72,7 @@ export default function Historique({ ateliers, onDelete, onDuplicate, navigate }
                   <td>{formatMoney(a.marge)}</td>
                   <td>{a.revenuHoraire != null ? `${Math.round(a.revenuHoraire)} €/h` : "—"}</td>
                   <td className="row-actions">
-                    <button className="btn-icon" aria-label="Modifier" onClick={() => navigate("fiche", { editing: true, record: a })}>
+                    <button className="btn-icon" aria-label="Modifier" onClick={() => navigate("planning", { focusSession: a.id })}>
                       <Pencil size={14} aria-hidden="true" />
                     </button>
                     <button className="btn-icon" aria-label="Dupliquer" onClick={() => onDuplicate(a.id)}>

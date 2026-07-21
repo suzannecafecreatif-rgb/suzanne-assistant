@@ -1,5 +1,5 @@
 import {
-  Home, Palette, CalendarDays, Megaphone, Package, Gift, Lightbulb, Plus, TrendingUp, Coffee, LogOut, BookOpen
+  Home, Palette, CalendarDays, Megaphone, Package, Gift, Lightbulb, TrendingUp, Coffee, LogOut, BookOpen
 } from "lucide-react";
 
 export const NAV_BIBLIOTHEQUE = [
@@ -8,11 +8,10 @@ export const NAV_BIBLIOTHEQUE = [
 
 export const NAV_ACTIVE = [
   { key: "dashboard", label: "Tableau de bord", icon: Home },
-  { key: "fiche", label: "Planifier une session", icon: Plus },
+  { key: "planning", label: "Planning", icon: CalendarDays },
   { key: "historique", label: "Historique", icon: Palette },
   { key: "rentabilite", label: "Rentabilité", icon: TrendingUp },
-  { key: "stocks", label: "Stocks", icon: Package },
-  { key: "planning", label: "Planning", icon: CalendarDays }
+  { key: "stocks", label: "Stocks", icon: Package }
 ];
 
 export const NAV_FUTURE = [

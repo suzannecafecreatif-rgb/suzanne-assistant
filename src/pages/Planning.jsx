@@ -1,128 +1,174 @@
-import { useState } from "react";
-import { ArrowLeft, ArrowRight, Plus } from "lucide-react";
-import { mondayOf, addDays, isoDate, formatDate, formatDayLabel, formatMonthLabel } from "../utils/dateHelpers.js";
-import AtelierPill from "../components/AtelierPill.jsx";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ArrowRight, Ban, BookOpen, Plus, X } from "lucide-react";
+import { mondayOf, addDays, isoDate, formatMonthLabel } from "../utils/dateHelpers.js";
+import PlanningSessionChip, { enrichSessions, sortSessionsByHeure } from "../components/PlanningSessionChip.jsx";
+import { SESSION_KIND } from "../utils/planningHelpers.js";
 
-export default function Planning({ ateliers, onMove, navigate }) {
-  const [view, setView] = useState("semaine");
+const WEEKDAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+function PlanningDayAddMenu({ dateIso, onSelect, onClose }) {
+  return (
+    <div className="planning-add-menu" role="menu">
+      <p className="planning-add-menu-title">
+        Ajouter le {new Date(`${dateIso}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+      </p>
+      <button
+        type="button"
+        className="planning-add-menu-item"
+        onClick={() => onSelect(SESSION_KIND.CATALOGUE)}
+      >
+        <BookOpen size={15} aria-hidden="true" />
+        Activité du catalogue
+      </button>
+      <button
+        type="button"
+        className="planning-add-menu-item"
+        onClick={() => onSelect(SESSION_KIND.BLOQUE)}
+      >
+        <Ban size={15} aria-hidden="true" />
+        Créneau bloqué
+      </button>
+      <button type="button" className="planning-add-menu-close btn btn-ghost btn-small" onClick={onClose}>
+        <X size={13} aria-hidden="true" /> Fermer
+      </button>
+    </div>
+  );
+}
+
+export default function Planning({ ateliers, catalogue = [], prefill, navigate }) {
   const [refDate, setRefDate] = useState(new Date());
-  const [dragOverDay, setDragOverDay] = useState(null);
+  const [addMenuDate, setAddMenuDate] = useState(null);
+  const [notice, setNotice] = useState("");
   const todayIso = isoDate(new Date());
 
-  const ateliersByDate = {};
-  ateliers.forEach((a) => {
-    (ateliersByDate[a.date] = ateliersByDate[a.date] || []).push(a);
-  });
-
-  const dragProps = (dayIso) => ({
-    onDragOver: (e) => e.preventDefault(),
-    onDragEnter: () => setDragOverDay(dayIso),
-    onDragLeave: () => setDragOverDay((d) => (d === dayIso ? null : d)),
-    onDrop: (e) => {
-      e.preventDefault();
-      const id = e.dataTransfer.getData("text/plain");
-      if (id) onMove(id, dayIso);
-      setDragOverDay(null);
+  useEffect(() => {
+    if (prefill?.date) {
+      setRefDate(new Date(`${prefill.date}T12:00:00`));
     }
-  });
+  }, [prefill?.date]);
 
-  const goPrev = () => setRefDate((d) => (view === "semaine" ? addDays(d, -7) : new Date(d.getFullYear(), d.getMonth() - 1, 1)));
-  const goNext = () => setRefDate((d) => (view === "semaine" ? addDays(d, 7) : new Date(d.getFullYear(), d.getMonth() + 1, 1)));
+  useEffect(() => {
+    if (!prefill?.openAdd || !prefill?.date) return;
+    setAddMenuDate(prefill.date);
+  }, [prefill?.openAdd, prefill?.date]);
+
+  const sessionsByDate = useMemo(() => {
+    const enriched = enrichSessions(ateliers, catalogue);
+    const map = {};
+    enriched.forEach((session) => {
+      if (!session.date) return;
+      (map[session.date] = map[session.date] || []).push(session);
+    });
+    Object.keys(map).forEach((key) => {
+      map[key] = sortSessionsByHeure(map[key]);
+    });
+    return map;
+  }, [ateliers, catalogue]);
+
+  const monthStart = new Date(refDate.getFullYear(), refDate.getMonth(), 1);
+  const gridStart = mondayOf(monthStart);
+  const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+
+  const goPrev = () => setRefDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const goNext = () => setRefDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   const goToday = () => setRefDate(new Date());
 
-  let content;
-  if (view === "semaine") {
-    const weekStart = mondayOf(refDate);
-    const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-    content = (
-      <div className="week-grid">
-        {days.map((d) => {
-          const iso = isoDate(d);
-          const items = ateliersByDate[iso] || [];
-          const isPast = iso < todayIso;
-          return (
-            <div key={iso} className={`week-day${dragOverDay === iso ? " drag-over" : ""}${iso === todayIso ? " is-today" : ""}`} {...dragProps(iso)}>
-              <p className="week-day-label">{formatDayLabel(d)}</p>
-              {items.map((a) => (
-                <AtelierPill
-                  key={a.id}
-                  atelier={a}
-                  onDragStart={(e) => e.dataTransfer.setData("text/plain", a.id)}
-                  onClick={() => navigate("fiche", { editing: true, record: a })}
-                />
-              ))}
-              {items.length === 0 && !isPast && (
-                <button className="day-add" onClick={() => navigate("fiche", { date: iso })} aria-label="Ajouter un atelier">
-                  <Plus size={13} aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
-  } else {
-    const gridStart = mondayOf(new Date(refDate.getFullYear(), refDate.getMonth(), 1));
-    const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-    content = (
-      <div className="month-grid">
-        {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((d) => (
-          <div key={d} className="month-dow">{d}</div>
-        ))}
-        {days.map((d) => {
-          const iso = isoDate(d);
-          const items = ateliersByDate[iso] || [];
-          const inMonth = d.getMonth() === refDate.getMonth();
-          const isPast = iso < todayIso;
-          return (
-            <div
-              key={iso}
-              className={`month-day${!inMonth ? " out-month" : ""}${dragOverDay === iso ? " drag-over" : ""}${iso === todayIso ? " is-today" : ""}`}
-              {...dragProps(iso)}
-            >
-              <div className="month-day-header">
-                <span className="month-day-num">{d.getDate()}</span>
-                {items.length === 0 && !isPast && inMonth && (
-                  <button className="day-add-small" onClick={() => navigate("fiche", { date: iso })} aria-label="Ajouter un atelier">
-                    <Plus size={11} aria-hidden="true" />
-                  </button>
-                )}
-              </div>
-              {items.slice(0, 2).map((a) => (
-                <AtelierPill
-                  key={a.id}
-                  atelier={a}
-                  onDragStart={(e) => e.dataTransfer.setData("text/plain", a.id)}
-                  onClick={() => navigate("fiche", { editing: true, record: a })}
-                />
-              ))}
-              {items.length > 2 && <p className="month-more">+{items.length - 2}</p>}
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
+  const handleAddSelect = () => {
+    setAddMenuDate(null);
+    setNotice("Formulaire d'ajout — prochaine étape (P-C).");
+    setTimeout(() => setNotice(""), 3500);
+  };
+
+  const toggleAddMenu = (iso) => {
+    setAddMenuDate((current) => (current === iso ? null : iso));
+  };
 
   return (
-    <div>
+    <div className="planning-page">
       <p className="page-title">Planning</p>
-      <p className="page-sub">Glisse un atelier vers une autre date pour le reprogrammer.</p>
+      <p className="page-sub">Agenda mensuel — planifie et organise toutes tes activités ici.</p>
+
+      {notice && (
+        <div className="flash-notice" role="status">{notice}</div>
+      )}
 
       <div className="planning-toolbar">
-        <div className="view-toggle">
-          <button className={view === "semaine" ? "active" : ""} onClick={() => setView("semaine")}>Semaine</button>
-          <button className={view === "mois" ? "active" : ""} onClick={() => setView("mois")}>Mois</button>
-        </div>
         <div className="nav-toggle">
-          <button className="btn-icon" aria-label="Précédent" onClick={goPrev}><ArrowLeft size={15} aria-hidden="true" /></button>
-          <span className="nav-label">{view === "semaine" ? `Semaine du ${formatDate(mondayOf(refDate))}` : formatMonthLabel(refDate)}</span>
-          <button className="btn-icon" aria-label="Suivant" onClick={goNext}><ArrowRight size={15} aria-hidden="true" /></button>
-          <button className="btn btn-ghost btn-small" onClick={goToday}>Aujourd'hui</button>
+          <button type="button" className="btn-icon" aria-label="Mois précédent" onClick={goPrev}>
+            <ArrowLeft size={15} aria-hidden="true" />
+          </button>
+          <span className="nav-label">{formatMonthLabel(refDate)}</span>
+          <button type="button" className="btn-icon" aria-label="Mois suivant" onClick={goNext}>
+            <ArrowRight size={15} aria-hidden="true" />
+          </button>
+          <button type="button" className="btn btn-ghost btn-small" onClick={goToday}>Aujourd'hui</button>
         </div>
       </div>
 
-      {content}
+      <div className="planning-agenda">
+        <div className="planning-agenda-head">
+          {WEEKDAYS.map((d) => (
+            <div key={d} className="planning-agenda-dow">{d}</div>
+          ))}
+        </div>
+
+        <div className="planning-agenda-grid">
+          {days.map((d) => {
+            const iso = isoDate(d);
+            const items = sessionsByDate[iso] || [];
+            const inMonth = d.getMonth() === refDate.getMonth();
+            const isToday = iso === todayIso;
+            const hasSessions = items.length > 0;
+
+            return (
+              <article
+                key={iso}
+                className={[
+                  "planning-day",
+                  !inMonth ? "is-out-month" : "",
+                  isToday ? "is-today" : "",
+                  hasSessions ? "has-sessions" : ""
+                ].filter(Boolean).join(" ")}
+              >
+                <header className="planning-day-header">
+                  <span className="planning-day-num">{d.getDate()}</span>
+                  {hasSessions && (
+                    <span className="planning-day-count">{items.length}</span>
+                  )}
+                </header>
+
+                <div className="planning-day-sessions">
+                  {items.map((session) => (
+                    <PlanningSessionChip key={session.id} session={session} />
+                  ))}
+                </div>
+
+                {inMonth && (
+                  <div className="planning-day-add">
+                    {addMenuDate === iso ? (
+                      <PlanningDayAddMenu
+                        dateIso={iso}
+                        onSelect={handleAddSelect}
+                        onClose={() => setAddMenuDate(null)}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-small planning-day-add-btn"
+                        onClick={() => toggleAddMenu(iso)}
+                        aria-label={`Ajouter une activité le ${d.getDate()}`}
+                      >
+                        <Plus size={14} aria-hidden="true" />
+                        Ajouter
+                      </button>
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

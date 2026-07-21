@@ -199,3 +199,55 @@ where type_activite is null;
 alter table catalogue_ateliers drop constraint if exists catalogue_type_activite_check;
 alter table catalogue_ateliers add constraint catalogue_type_activite_check
   check (type_activite in ('Atelier guidé', 'Pause créative', 'Atelier intervenant', 'Événement privé'));
+
+-- Planning V1 — snapshots sessions + créneaux bloqués (P-A)
+alter table ateliers add column if not exists notes text;
+alter table ateliers add column if not exists kind text default 'catalogue';
+alter table ateliers add column if not exists type_activite text;
+alter table ateliers add column if not exists categorie text;
+alter table ateliers add column if not exists photo_path text;
+alter table ateliers add column if not exists description text;
+alter table ateliers add column if not exists duree_min integer;
+alter table ateliers add column if not exists places_max integer;
+alter table ateliers add column if not exists heure_fin text;
+alter table ateliers add column if not exists libelle text;
+
+update ateliers set kind = 'catalogue' where kind is null;
+
+-- Migration statuts legacy → V1 (casse et accents)
+update ateliers
+set statut = case
+  when statut is null then 'Prévu'
+  when statut in ('Prévu', 'Réservations ouvertes', 'Complet', 'Privé', 'Annulé') then statut
+  when lower(trim(statut)) in ('prévu', 'prevu', 'ouvert', 'brouillon', 'planifié', 'planifie') then 'Prévu'
+  when lower(trim(statut)) in ('réservations ouvertes', 'reservations ouvertes') then 'Réservations ouvertes'
+  when lower(trim(statut)) in ('complet', 'terminé', 'termine') then 'Complet'
+  when lower(trim(statut)) in ('privé', 'prive') then 'Privé'
+  when lower(trim(statut)) in ('annulé', 'annule') then 'Annulé'
+  else 'Prévu'
+end;
+
+update ateliers
+set statut = 'Prévu'
+where statut not in ('Prévu', 'Réservations ouvertes', 'Complet', 'Privé', 'Annulé');
+
+update ateliers a
+set
+  nom = coalesce(nullif(a.nom, ''), c.nom),
+  type_activite = coalesce(a.type_activite, c.type_activite),
+  categorie = coalesce(a.categorie, c.categorie),
+  photo_path = coalesce(a.photo_path, c.photo_path),
+  description = coalesce(a.description, c.description),
+  duree_min = coalesce(a.duree_min, c.duree_min),
+  prix_participant = coalesce(a.prix_participant, c.prix_participant),
+  places_max = coalesce(a.places_max, c.places_max)
+from catalogue_ateliers c
+where a.catalogue_id = c.id;
+
+alter table ateliers drop constraint if exists ateliers_kind_check;
+alter table ateliers add constraint ateliers_kind_check
+  check (kind in ('catalogue', 'bloque'));
+
+alter table ateliers drop constraint if exists ateliers_statut_check;
+alter table ateliers add constraint ateliers_statut_check
+  check (statut in ('Prévu', 'Réservations ouvertes', 'Complet', 'Privé', 'Annulé'));

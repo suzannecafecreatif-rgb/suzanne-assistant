@@ -2,7 +2,6 @@ import { useEffect, useReducer, useCallback, useState } from "react";
 import Sidebar from "./components/Sidebar.jsx";
 import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
-import FicheAtelier from "./pages/FicheAtelier.jsx";
 import Historique from "./pages/Historique.jsx";
 import Rentabilite from "./pages/Rentabilite.jsx";
 import Stocks from "./pages/Stocks.jsx";
@@ -149,16 +148,19 @@ export default function App() {
             navigate={navigate}
             revenuHoraireObjectif={revenuHoraireObjectif}
           />
-        ) : screen === "fiche" ? (
-          <FicheAtelier prefill={prefill} stock={stock} onSave={handleSave} onUpdate={handleUpdateAtelier} navigate={navigate} />
+        ) : screen === "planning" ? (
+          <Planning
+            ateliers={ateliers}
+            catalogue={catalogue}
+            prefill={prefill}
+            navigate={navigate}
+          />
         ) : screen === "historique" ? (
           <Historique ateliers={ateliers} onDelete={handleDelete} onDuplicate={handleDuplicate} navigate={navigate} />
         ) : screen === "rentabilite" ? (
           <Rentabilite ateliers={ateliers} />
         ) : screen === "stocks" ? (
           <Stocks stock={stock} onAdd={handleAddStock} onUpdate={handleUpdateStock} onDelete={handleDeleteStock} />
-        ) : screen === "planning" ? (
-          <Planning ateliers={ateliers} onMove={handleMoveAtelier} navigate={navigate} />
         ) : null}
       </div>
     </div>

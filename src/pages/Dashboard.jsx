@@ -141,9 +141,9 @@ export default function Dashboard({ ateliers, stock, onUpdate, navigate }) {
 
         <button
           className="btn btn-primary"
-          onClick={() => navigate("fiche", { theme: brief.theme, prixParticipant: brief.prixConseille, participants: brief.placesConseillees })}
+          onClick={() => navigate("planning")}
         >
-          Programmer <ArrowRight size={14} aria-hidden="true" />
+          Ouvrir le planning <ArrowRight size={14} aria-hidden="true" />
         </button>
       </div>
     </div>

@@ -1,3 +1,4 @@
+// Écran legacy — remplacé par le Planning (calendrier). Conservé le temps de la transition.
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { THEMES } from "../data/themes.js";

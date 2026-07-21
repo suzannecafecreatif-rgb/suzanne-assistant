@@ -40,8 +40,10 @@ export function appReducer(state, action) {
     case "DELETE_CATALOGUE":
       return { ...state, catalogue: state.catalogue.filter((c) => c.id !== action.id) };
 
-    case "NAVIGATE":
-      return { ...state, screen: action.screen, prefill: action.prefill || null };
+    case "NAVIGATE": {
+      const screen = action.screen === "fiche" ? "planning" : action.screen;
+      return { ...state, screen, prefill: action.prefill || null };
+    }
 
     case "ADD_ATELIER":
       return { ...state, ateliers: [...state.ateliers, action.record] };
