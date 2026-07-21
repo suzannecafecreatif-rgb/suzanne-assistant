@@ -109,3 +109,36 @@ export function formatDashboardSessionSummary(session) {
   if (statut && statut !== "Prévu") parts.push(statut);
   return parts.join(" · ");
 }
+
+/** Nom d'activité affichable (snapshot Planning V1). */
+export function getSessionActivityName(session) {
+  return getSessionDisplayName(session);
+}
+
+/** Sessions éligibles aux indicateurs financiers (hors créneaux bloqués). */
+export function isFinancialSession(session) {
+  return !isBlockedSlot(session);
+}
+
+/** Options de filtre par activité (noms uniques, triés). */
+export function getActivityFilterOptions(sessions) {
+  const names = new Set(
+    sessions.map((s) => getSessionActivityName(s)).filter(Boolean)
+  );
+  return [...names].sort((a, b) => a.localeCompare(b, "fr"));
+}
+
+/** Options de filtre par type d'activité (sessions catalogue). */
+export function getTypeFilterOptions(sessions) {
+  const types = new Set(
+    sessions
+      .filter((s) => isCatalogueSession(s) && s.typeActivite?.trim())
+      .map((s) => s.typeActivite.trim())
+  );
+  return [...types].sort((a, b) => a.localeCompare(b, "fr"));
+}
+
+/** Sessions avec indicateurs financiers calculables pour Historique / Rentabilité. */
+export function getFinancialSessions(sessions) {
+  return sessions.filter(isFinancialSession);
+}

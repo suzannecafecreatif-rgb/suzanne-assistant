@@ -7,9 +7,14 @@ import {
   formatDashboardSessionSummary,
   formatSessionHeure,
   formatSessionPlaces,
+  getActivityFilterOptions,
+  getFinancialSessions,
   getFreeSlotDaysThisWeek,
   getSessionsToday,
-  getSessionsToPromote
+  getSessionsToPromote,
+  getSessionActivityName,
+  getTypeFilterOptions,
+  isFinancialSession
 } from "../src/utils/planningQueries.js";
 import { isoDate, mondayOf } from "../src/utils/dateHelpers.js";
 
@@ -126,6 +131,16 @@ assert(summary.includes("10:00"), "Résumé contient l'heure");
 assert(summary.includes("Tufting"), "Résumé contient le nom");
 assert(summary.includes("8/8"), "Résumé contient les places");
 assert(summary.includes("Complet"), "Résumé contient le statut");
+
+console.log("\n=== Scénario 6 — Analyse U-2 ===");
+assert(getSessionActivityName(enriched.find((s) => s.id === "s1")) === "Tufting Découverte", "Nom activité snapshot");
+assert(isFinancialSession(enriched.find((s) => s.id === "s1")), "Session catalogue financière");
+assert(!isFinancialSession(enriched.find((s) => s.id === "s3")), "Créneau bloqué non financier");
+const activityOpts = getActivityFilterOptions(enriched);
+assert(activityOpts.includes("Tufting Découverte"), "Option filtre activité");
+assert(activityOpts.includes("Privatisation"), "Option filtre créneau bloqué");
+assert(getTypeFilterOptions(enriched).includes("Atelier guidé"), "Option filtre type");
+assert(getFinancialSessions(enriched).length === 4, "4 sessions financières sur 5");
 
 console.log(`\n=== Résultat : ${passed} ok, ${failed} échec(s) ===`);
 process.exit(failed > 0 ? 1 : 0);

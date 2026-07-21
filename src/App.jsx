@@ -165,9 +165,15 @@ export default function App() {
             navigate={navigate}
           />
         ) : screen === "historique" ? (
-          <Historique ateliers={ateliers} onDelete={handleDelete} onDuplicate={handleDuplicate} navigate={navigate} />
+          <Historique
+            ateliers={ateliers}
+            catalogue={catalogue}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            navigate={navigate}
+          />
         ) : screen === "rentabilite" ? (
-          <Rentabilite ateliers={ateliers} />
+          <Rentabilite ateliers={ateliers} catalogue={catalogue} />
         ) : screen === "stocks" ? (
           <Stocks stock={stock} onAdd={handleAddStock} onUpdate={handleUpdateStock} onDelete={handleDeleteStock} />
         ) : null}
