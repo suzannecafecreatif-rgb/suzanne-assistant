@@ -277,18 +277,95 @@ alter table ateliers drop constraint if exists ateliers_statut_check;
 alter table ateliers add constraint ateliers_statut_check
   check (statut in ('Prévu', 'Réservations ouvertes', 'Complet', 'Privé', 'Annulé'));
 
--- R-B — Journal Amelia webhooks (réception uniquement)
+-- R-A — Réservations Amelia + liens session (Appointment V1)
+alter table ateliers add column if not exists amelia_service_id integer;
+alter table ateliers add column if not exists amelia_event_id integer;
+alter table ateliers add column if not exists amelia_period_id integer;
+
+create table if not exists session_amelia_links (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  session_id uuid not null references ateliers(id) on delete cascade,
+  amelia_entity_type text not null
+    check (amelia_entity_type in ('appointment', 'event')),
+  amelia_service_id integer,
+  amelia_event_id integer,
+  amelia_period_id integer,
+  booking_start timestamptz,
+  link_source text not null default 'manual'
+    check (link_source in ('manual', 'auto', 'import')),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, session_id)
+);
+
+create index if not exists session_amelia_links_lookup_appointment_idx
+  on session_amelia_links (user_id, amelia_entity_type, amelia_service_id, booking_start)
+  where amelia_entity_type = 'appointment';
+
+alter table session_amelia_links enable row level security;
+
+create table if not exists reservations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  session_id uuid references ateliers(id) on delete set null,
+  amelia_booking_id integer not null,
+  amelia_appointment_id integer,
+  amelia_entity_type text not null
+    check (amelia_entity_type in ('appointment', 'event', 'package')),
+  amelia_service_id integer,
+  amelia_event_id integer,
+  amelia_period_id integer,
+  amelia_customer_id integer,
+  customer_first_name text,
+  customer_last_name text,
+  customer_email text,
+  customer_phone text,
+  persons integer not null default 1 check (persons > 0),
+  booking_status text not null,
+  booking_start timestamptz,
+  booking_end timestamptz,
+  payment_status text,
+  payment_amount numeric,
+  payment_currency text default 'EUR',
+  payment_gateway text,
+  payment_transaction_id text,
+  amelia_payment_id integer,
+  source text not null default 'amelia'
+    check (source in ('amelia', 'manual')),
+  canceled_at timestamptz,
+  amelia_payload jsonb,
+  import_fingerprint text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, amelia_booking_id)
+);
+
+create index if not exists reservations_session_id_idx on reservations (session_id);
+create index if not exists reservations_booking_status_idx on reservations (booking_status);
+create index if not exists reservations_amelia_service_start_idx
+  on reservations (amelia_service_id, booking_start);
+
+alter table reservations enable row level security;
+
+-- R-B — Journal Amelia webhooks (réception + traitement R-C)
 create table if not exists amelia_webhook_events (
   id uuid primary key default gen_random_uuid(),
   received_at timestamptz not null default now(),
   event_type text,
   event_action text,
+  request_headers jsonb,
   payload jsonb not null,
   processed boolean not null default false,
-  processing_error text
+  processing_error text,
+  processed_at timestamptz
 );
 
 alter table amelia_webhook_events enable row level security;
+
+alter table amelia_webhook_events add column if not exists request_headers jsonb;
+alter table amelia_webhook_events add column if not exists processed_at timestamptz;
 
 create index if not exists amelia_webhook_events_received_at_idx
   on amelia_webhook_events (received_at desc);

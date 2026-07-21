@@ -67,10 +67,11 @@ const goodTokenNoDb = await handleAmeliaWebhookRequest({
   query: { token: SECRET },
   body: { type: "appointment", action: "bookingAdded", sample: true }
 });
-assert(
-  goodTokenNoDb.status === 500 || goodTokenNoDb.status === 200,
-  "POST bon token → 200 (si Supabase configuré) ou 500 (sinon)"
-);
+assert(goodTokenNoDb.status === 500 || goodTokenNoDb.status === 200, "POST bon token → 200 ou 500 si Supabase absent");
+if (goodTokenNoDb.status === 200) {
+  assert(goodTokenNoDb.body.ok === true, "Réponse ok:true");
+  assert(typeof goodTokenNoDb.body.eventId === "string", "eventId renvoyé (R-C)");
+}
 
 if (prevSecret === undefined) delete process.env.AMELIA_WEBHOOK_SECRET;
 else process.env.AMELIA_WEBHOOK_SECRET = prevSecret;
