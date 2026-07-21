@@ -246,7 +246,10 @@ where a.catalogue_id = c.id;
 
 alter table ateliers drop constraint if exists ateliers_kind_check;
 alter table ateliers add constraint ateliers_kind_check
-  check (kind in ('catalogue', 'bloque'));
+  check (kind in ('catalogue', 'bloque', 'evenement'));
+
+-- E-A — Événements ponctuels (sans lien catalogue)
+alter table ateliers add column if not exists intervenant text;
 
 alter table ateliers drop constraint if exists ateliers_statut_check;
 alter table ateliers add constraint ateliers_statut_check

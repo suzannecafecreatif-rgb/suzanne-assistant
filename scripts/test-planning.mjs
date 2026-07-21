@@ -6,16 +6,23 @@ import {
   ACTIVITY_TYPE_COLORS,
   BLOCKED_SLOT_COLOR,
   createBlockedSlot,
+  createEvenementSession,
   createSessionFromCatalogue,
   duplicateSession,
   enrichSession,
   getSessionDisplayName,
   getSessionFillRate,
   getSessionTypeColor,
+  isActivitySession,
   isBlockedSlot,
+  isCatalogueSession,
+  isEvenementSession,
+  isFinancialSession,
+  normalizeSessionKind,
   normalizeSessionStatut,
   patchBlockedSlot,
   patchCatalogueSession,
+  patchEvenementSession,
   SESSION_KIND,
   SESSION_STATUTS
 } from "../src/utils/planningHelpers.js";
@@ -128,6 +135,43 @@ const dupBloque = duplicateSession(bloque, { date: "2026-10-02", heure: "09:00",
 assert(dupBloque.id !== bloque.id, "Nouvel id bloqué");
 assert(dupBloque.heureFin === "12:00", "Nouvelle fin bloquée");
 assert(dupBloque.libelle === bloque.libelle, "Libellé conservé");
+
+console.log("\n=== Scénario 9 — Événement ponctuel (E-A) ===");
+const evenement = createEvenementSession({
+  nom: "Conférence linogravure",
+  intervenant: "Marie Dupont",
+  typeActivite: "Atelier intervenant",
+  date: "2026-11-05",
+  heure: "18:30",
+  prixParticipant: 35,
+  placesMax: 20,
+  inscrits: 12,
+  dureeMin: 90,
+  notes: "Partenaire mairie"
+});
+assert(evenement.kind === SESSION_KIND.EVENEMENT, "Kind = evenement");
+assert(isEvenementSession(evenement), "isEvenementSession");
+assert(!isCatalogueSession(evenement), "Pas catalogue");
+assert(isActivitySession(evenement), "isActivitySession");
+assert(isFinancialSession(evenement), "isFinancialSession");
+assert(evenement.catalogueId == null, "Sans catalogue_id");
+assert(evenement.intervenant === "Marie Dupont", "Intervenant");
+assert(evenement.participants === 12, "Nombre d'inscrits");
+assert(evenement.typeActivite === "Atelier intervenant", "Type activité");
+assert(getSessionTypeColor(evenement) === ACTIVITY_TYPE_COLORS["Atelier intervenant"], "Couleur type");
+const evtSansIntervenant = createEvenementSession({ nom: "Pop-up", date: "2026-11-06", heure: "10:00" });
+assert(evtSansIntervenant.intervenant === "", "Intervenant facultatif");
+const patchedEvt = patchEvenementSession(evenement, { nom: "Conférence mise à jour", inscrits: 15, statut: "Complet" });
+assert(patchedEvt.nom === "Conférence mise à jour", "Nom modifiable");
+assert(patchedEvt.participants === 15, "Inscrits modifiables");
+assert(patchedEvt.statut === "Complet", "Statut modifiable");
+assert(patchedEvt.nom === patchedEvt.theme, "theme synchronisé");
+const enrichedEvt = enrichSession(evenement, [modeleTufting]);
+assert(enrichedEvt.nom === "Conférence linogravure", "enrichSession ne tire pas du catalogue");
+assert(normalizeSessionKind(undefined) === SESSION_KIND.CATALOGUE, "Legacy kind → catalogue");
+assert(normalizeSessionKind("evenement") === SESSION_KIND.EVENEMENT, "normalizeSessionKind evenement");
+const dupEvt = duplicateSession(evenement, { date: "2026-12-01", heure: "19:00" });
+assert(dupEvt.intervenant === evenement.intervenant, "Duplication conserve intervenant");
 
 console.log(`\n=== Résultat : ${passed} ok, ${failed} échec(s) ===`);
 process.exit(failed > 0 ? 1 : 0);

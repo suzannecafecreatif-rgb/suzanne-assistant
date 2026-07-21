@@ -4,8 +4,12 @@ import { addDays, isoDate, mondayOf } from "./dateHelpers.js";
 import {
   enrichSession,
   getSessionDisplayName,
+  isActivitySession,
   isBlockedSlot,
   isCatalogueSession,
+  isEvenementSession,
+  isFinancialSession,
+  isPromotableSession,
   normalizeSessionStatut
 } from "./planningHelpers.js";
 
@@ -66,7 +70,7 @@ export function getSessionsToPromote(sessions, { fromDate, toDate } = {}) {
 
   return sortByHeure(
     sessions.filter((s) => {
-      if (!isCatalogueSession(s)) return false;
+      if (!isPromotableSession(s)) return false;
       if (s.communique) return false;
       if (normalizeSessionStatut(s.statut) === "Annulé") return false;
       if (!s.date || s.date < from || s.date > to) return false;
@@ -78,7 +82,7 @@ export function getSessionsToPromote(sessions, { fromDate, toDate } = {}) {
 /**
  * Jours encore libres cette semaine pour une activité catalogue :
  * - à partir d'aujourd'hui, jusqu'à dimanche ;
- * - un jour est libre s'il n'a aucune session catalogue (créneau bloqué seul = jour libre).
+ * - un jour est libre s'il n'a aucune session catalogue ni événement ponctuel.
  */
 export function getFreeSlotDaysThisWeek(sessions, refDate = new Date()) {
   const now = new Date(refDate);
@@ -87,16 +91,16 @@ export function getFreeSlotDaysThisWeek(sessions, refDate = new Date()) {
   const monday = mondayOf(now);
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
-  const catalogueDates = new Set(
+  const occupiedDates = new Set(
     sessions
-      .filter((s) => isCatalogueSession(s) && normalizeSessionStatut(s.statut) !== "Annulé")
+      .filter((s) => isActivitySession(s) && normalizeSessionStatut(s.statut) !== "Annulé")
       .map((s) => s.date)
       .filter(Boolean)
   );
 
   return weekDays.filter((d) => {
     if (d < now) return false;
-    return !catalogueDates.has(isoDate(d));
+    return !occupiedDates.has(isoDate(d));
   });
 }
 
@@ -115,10 +119,7 @@ export function getSessionActivityName(session) {
   return getSessionDisplayName(session);
 }
 
-/** Sessions éligibles aux indicateurs financiers (hors créneaux bloqués). */
-export function isFinancialSession(session) {
-  return !isBlockedSlot(session);
-}
+export { isFinancialSession, isActivitySession, isEvenementSession, isCatalogueSession, isBlockedSlot };
 
 /** Options de filtre par activité (noms uniques, triés). */
 export function getActivityFilterOptions(sessions) {
@@ -132,7 +133,7 @@ export function getActivityFilterOptions(sessions) {
 export function getTypeFilterOptions(sessions) {
   const types = new Set(
     sessions
-      .filter((s) => isCatalogueSession(s) && s.typeActivite?.trim())
+      .filter((s) => isActivitySession(s) && s.typeActivite?.trim())
       .map((s) => s.typeActivite.trim())
   );
   return [...types].sort((a, b) => a.localeCompare(b, "fr"));

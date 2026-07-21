@@ -1,10 +1,11 @@
-// Helpers Planning V1 — sessions catalogue (snapshots) et créneaux bloqués.
+// Helpers Planning V1 — sessions catalogue (snapshots), événements ponctuels et créneaux bloqués.
 
 import { ACTIVITY_TYPES } from "../data/catalogueMeta.js";
 
 export const SESSION_KIND = {
   CATALOGUE: "catalogue",
-  BLOQUE: "bloque"
+  BLOQUE: "bloque",
+  EVENEMENT: "evenement"
 };
 
 export const SESSION_STATUTS = [
@@ -120,12 +121,40 @@ function toNumber(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Normalise kind (legacy sans kind → catalogue). */
+export function normalizeSessionKind(kind) {
+  if (kind === SESSION_KIND.BLOQUE || kind === SESSION_KIND.EVENEMENT || kind === SESSION_KIND.CATALOGUE) {
+    return kind;
+  }
+  return SESSION_KIND.CATALOGUE;
+}
+
 export function isBlockedSlot(session) {
-  return session?.kind === SESSION_KIND.BLOQUE;
+  return normalizeSessionKind(session?.kind) === SESSION_KIND.BLOQUE;
 }
 
 export function isCatalogueSession(session) {
-  return session?.kind !== SESSION_KIND.BLOQUE;
+  return normalizeSessionKind(session?.kind) === SESSION_KIND.CATALOGUE;
+}
+
+export function isEvenementSession(session) {
+  return normalizeSessionKind(session?.kind) === SESSION_KIND.EVENEMENT;
+}
+
+/** Activité planifiable avec données métier (catalogue ou événement ponctuel). */
+export function isActivitySession(session) {
+  const kind = normalizeSessionKind(session?.kind);
+  return kind === SESSION_KIND.CATALOGUE || kind === SESSION_KIND.EVENEMENT;
+}
+
+/** Éligible aux indicateurs financiers et au classement Rentabilité. */
+export function isFinancialSession(session) {
+  return isActivitySession(session);
+}
+
+/** Éligible au bloc « Publications à préparer » (hors statut / communique gérés ailleurs). */
+export function isPromotableSession(session) {
+  return isActivitySession(session);
 }
 
 /** Nom affiché dans le calendrier. */
@@ -147,7 +176,7 @@ export function getSessionTypeColor(session) {
  * participants = places prévues / capacité pour la session.
  */
 export function getSessionFillRate(session) {
-  if (isBlockedSlot(session)) return null;
+  if (!isActivitySession(session)) return null;
   const capacity = toNumber(session.placesMax || session.participants);
   const booked = toNumber(session.participants);
   if (capacity <= 0 || booked <= 0) return null;
@@ -185,6 +214,7 @@ export function createSessionFromCatalogue(catalogueItem, options = {}) {
     heure,
     heureFin: "",
     libelle: "",
+    intervenant: "",
     participants: placesValue,
     statut: normalizeSessionStatut(statut),
     notes: notes || "",
@@ -229,6 +259,7 @@ export function createBlockedSlot(options = {}) {
     heure,
     heureFin,
     libelle: label,
+    intervenant: "",
     participants: "",
     statut: normalizeSessionStatut(statut),
     notes: notes || "",
@@ -237,6 +268,63 @@ export function createBlockedSlot(options = {}) {
     animMin: "",
     materials: [],
     communique: false,
+    createdAt: createdAt || new Date().toISOString()
+  };
+}
+
+/** Crée un événement ponctuel sans lien catalogue. */
+export function createEvenementSession(options = {}) {
+  const {
+    nom = "",
+    intervenant = "",
+    typeActivite = "",
+    date,
+    heure = "",
+    prixParticipant = "",
+    placesMax = "",
+    inscrits,
+    participants,
+    dureeMin = "",
+    prepMin = "",
+    animMin = "",
+    coutMatiere = "",
+    notes = "",
+    statut = DEFAULT_SESSION_STATUT,
+    communique = false,
+    id,
+    createdAt
+  } = options;
+
+  const label = nom.trim();
+  const inscritsValue = inscrits ?? participants ?? "";
+  const type = ACTIVITY_TYPES.includes(typeActivite) ? typeActivite : (typeActivite || "").trim();
+
+  return {
+    id: id || crypto.randomUUID(),
+    kind: SESSION_KIND.EVENEMENT,
+    catalogueId: null,
+    nom: label,
+    typeActivite: type,
+    categorie: "",
+    photoPath: "",
+    description: "",
+    dureeMin,
+    prixParticipant,
+    placesMax,
+    theme: label,
+    date: date || "",
+    heure,
+    heureFin: "",
+    libelle: "",
+    intervenant: (intervenant || "").trim(),
+    participants: inscritsValue,
+    statut: normalizeSessionStatut(statut),
+    notes: notes || "",
+    coutMatiere,
+    prepMin,
+    animMin: animMin !== "" ? animMin : dureeMin,
+    materials: [],
+    communique: !!communique,
     createdAt: createdAt || new Date().toISOString()
   };
 }
@@ -250,11 +338,11 @@ export function enrichSession(session, catalogueItems = []) {
 
   const enriched = {
     ...session,
-    kind: session.kind || SESSION_KIND.CATALOGUE,
+    kind: normalizeSessionKind(session.kind),
     statut: normalizeSessionStatut(session.statut)
   };
 
-  if (isBlockedSlot(enriched)) return enriched;
+  if (isBlockedSlot(enriched) || isEvenementSession(enriched)) return enriched;
 
   const linked = enriched.catalogueId
     ? catalogueItems.find((c) => c.id === enriched.catalogueId)
@@ -313,6 +401,30 @@ export function patchBlockedSlot(session, patch = {}) {
     theme: libelle || session.theme || "Créneau bloqué",
     statut: patch.statut != null ? normalizeSessionStatut(patch.statut) : session.statut,
     notes: patch.notes ?? session.notes
+  };
+}
+
+/** Met à jour les champs modifiables d'un événement ponctuel. */
+export function patchEvenementSession(session, patch = {}) {
+  const nom = patch.nom != null ? patch.nom.trim() : session.nom;
+  return {
+    ...session,
+    nom: nom || session.nom || "",
+    theme: nom || session.theme || session.nom || "",
+    intervenant: patch.intervenant != null ? patch.intervenant.trim() : session.intervenant,
+    typeActivite: patch.typeActivite ?? session.typeActivite,
+    date: patch.date ?? session.date,
+    heure: patch.heure ?? session.heure,
+    prixParticipant: patch.prixParticipant ?? patch.prix ?? session.prixParticipant,
+    placesMax: patch.placesMax ?? patch.capacite ?? session.placesMax,
+    participants: patch.participants ?? patch.inscrits ?? session.participants,
+    dureeMin: patch.dureeMin ?? session.dureeMin,
+    prepMin: patch.prepMin ?? session.prepMin,
+    animMin: patch.animMin ?? session.animMin,
+    coutMatiere: patch.coutMatiere ?? session.coutMatiere,
+    statut: patch.statut != null ? normalizeSessionStatut(patch.statut) : session.statut,
+    notes: patch.notes ?? session.notes,
+    communique: patch.communique != null ? !!patch.communique : session.communique
   };
 }
 
